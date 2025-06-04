@@ -18,7 +18,7 @@ class MyApp extends StatelessWidget {
           brightness: Brightness.light,
         ),
         useMaterial3: true,
-        cardTheme: CardTheme(
+        cardTheme: CardThemeData( // Changed CardTheme to CardThemeData
           elevation: 2,
           margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           shape: RoundedRectangleBorder(

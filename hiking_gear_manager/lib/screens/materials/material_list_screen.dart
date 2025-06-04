@@ -211,22 +211,6 @@ class MaterialListScreenState extends State<MaterialListScreen> { // Public stat
           child: content,
         ),
       ],
-            children: <Widget>[
-              IconButton(
-                icon: const Icon(Icons.edit),
-                tooltip: 'Edit Material',
-                onPressed: () => navigateToAditEditScreen(material: material), // Public method
-              ),
-              IconButton(
-                icon: const Icon(Icons.delete),
-                tooltip: 'Delete Material',
-                onPressed: () => deleteMaterial(material.id!), // Public method // id should not be null here
-              ),
-            ],
-          ),
-          onTap: () => navigateToAditEditScreen(material: material), // Public method // Also allow tap on tile to edit
-        );
-      },
     );
   }
 }

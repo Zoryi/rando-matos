@@ -258,21 +258,6 @@ class ExpeditionListScreenState extends State<ExpeditionListScreen> { // Public 
           child: content,
         ),
       ],
-            children: <Widget>[
-              IconButton(
-                icon: const Icon(Icons.edit),
-                tooltip: 'Edit Expedition',
-                onPressed: () => navigateToAddEditExpeditionScreen(expedition: expedition), // Public method
-              ),
-              IconButton(
-                icon: const Icon(Icons.delete),
-                tooltip: 'Delete Expedition',
-                onPressed: () => deleteExpedition(expedition.id!), // Public method
-              ),
-            ],
-          ),
-        );
-      },
     );
   }
 }

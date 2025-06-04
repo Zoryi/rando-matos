@@ -238,21 +238,6 @@ class KitListScreenState extends State<KitListScreen> { // Public state class
           child: content,
         ),
       ],
-            children: <Widget>[
-              IconButton(
-                icon: const Icon(Icons.edit),
-                tooltip: 'Edit Kit',
-                onPressed: () => navigateToAditEditKitScreen(kit: kit), // Public method
-              ),
-              IconButton(
-                icon: const Icon(Icons.delete),
-                tooltip: 'Delete Kit',
-                onPressed: () => deleteKit(kit.id!), // Public method
-              ),
-            ],
-          ),
-        );
-      },
     );
   }
 }
