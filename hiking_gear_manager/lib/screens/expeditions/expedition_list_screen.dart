@@ -40,55 +40,84 @@ class ExpeditionListScreenState extends State<ExpeditionListScreen> { // Public 
     });
 
     final db = await _dbHelper.database;
-    final List<Map<String, dynamic>> expeditionMaps = await db.query(DatabaseHelper.tableExpeditions);
 
-    List<Expedition> enrichedExpeditions = [];
-    for (var expMap in expeditionMaps) {
-      Expedition expedition = Expedition.fromMap(expMap);
-      int kitCount = 0;
-      double totalWeight = 0.0;
+    // Step 1: Fetch all base expeditions
+    final List<Map<String, dynamic>> expeditionDataMaps = await db.query(DatabaseHelper.tableExpeditions);
+    List<Expedition> baseExpeditions = expeditionDataMaps.map((map) => Expedition.fromMap(map)).toList();
 
-      if (expedition.id != null) {
-        // Get kit IDs for the current expedition
-        final List<Map<String, dynamic>> expeditionKitLinks = await db.query(
-          DatabaseHelper.tableExpeditionKits,
-          where: 'expeditionId = ?',
-          whereArgs: [expedition.id],
+    if (baseExpeditions.isEmpty) {
+      _allExpeditions = [];
+      _filterExpeditions();
+      if (mounted) {
+        setState(() { _isInitiallyLoading = false; });
+      }
+      return;
+    }
+
+    // Step 2: Fetch all expedition-kit relations
+    final List<Map<String, dynamic>> allExpeditionKitRelationMaps = await db.query(DatabaseHelper.tableExpeditionKits);
+
+    // Step 3: Get all unique kit IDs from these relations
+    Set<int> allKitIdsInExpeditions = allExpeditionKitRelationMaps.map((map) => map['kitId'] as int).toSet();
+
+    Map<int, double> kitTotalWeights = {};
+    Map<int, AppMaterial> materialsMap = {};
+
+    if (allKitIdsInExpeditions.isNotEmpty) {
+      // Step 4: Fetch all kit-material relations for these specific kits.
+      final List<Map<String, dynamic>> allKitMaterialRelationMaps = await db.query(
+        DatabaseHelper.tableKitMaterials,
+        where: '${DatabaseHelper.columnKitId} IN (${List.filled(allKitIdsInExpeditions.length, '?').join(',')})',
+        whereArgs: allKitIdsInExpeditions.toList(),
+      );
+
+      // Step 5: Fetch all unique materials involved in these specific kit-material relations.
+      Set<int> allMaterialIdsInKits = allKitMaterialRelationMaps.map((map) => map['materialId'] as int).toSet();
+
+      if (allMaterialIdsInKits.isNotEmpty) {
+        final List<Map<String, dynamic>> materialDetailMaps = await db.query(
+          DatabaseHelper.tableMaterials,
+          where: '${DatabaseHelper.columnId} IN (${List.filled(allMaterialIdsInKits.length, '?').join(',')})',
+          whereArgs: allMaterialIdsInKits.toList(),
         );
+        List<AppMaterial> allMaterialsInExpeditionKits = materialDetailMaps.map((map) => AppMaterial.fromMap(map)).toList();
+        materialsMap = {for (var m in allMaterialsInExpeditionKits) m.id!: m};
+      }
 
-        kitCount = expeditionKitLinks.length;
-        List<int> kitIds = expeditionKitLinks.map((link) => link['kitId'] as int).toList();
+      // Step 6: Calculate total weight for each relevant kit.
+      for (int kitId in allKitIdsInExpeditions) {
+        double currentKitWeight = 0.0;
+        List<Map<String, dynamic>> relationsForThisKit = allKitMaterialRelationMaps
+            .where((relMap) => relMap['kitId'] == kitId)
+            .toList();
 
-        if (kitIds.isNotEmpty) {
-          for (int kitId in kitIds) {
-            // For each kit, calculate its total weight
-            double currentKitWeight = 0.0;
-            final List<Map<String, dynamic>> kitMaterialLinks = await db.query(
-              DatabaseHelper.tableKitMaterials,
-              where: 'kitId = ?',
-              whereArgs: [kitId],
-            );
-
-            List<int> materialIds = kitMaterialLinks.map((link) => link['materialId'] as int).toList();
-
-            if (materialIds.isNotEmpty) {
-              String placeholders = List.filled(materialIds.length, '?').join(',');
-              final List<Map<String, dynamic>> materialMaps = await db.query(
-                DatabaseHelper.tableMaterials,
-                where: 'id IN ($placeholders)',
-                whereArgs: materialIds,
-              );
-              for (var materialMap in materialMaps) {
-                currentKitWeight += (AppMaterial.fromMap(materialMap).weight);
-              }
-            }
-            totalWeight += currentKitWeight;
+        for (var relMap in relationsForThisKit) {
+          AppMaterial? material = materialsMap[relMap['materialId']];
+          if (material != null) {
+            currentKitWeight += material.weight;
           }
         }
+        kitTotalWeights[kitId] = currentKitWeight;
       }
-      enrichedExpeditions.add(expedition.copyWith(kitCount: kitCount, totalWeight: totalWeight));
     }
-    _allExpeditions = enrichedExpeditions;
+
+    // Step 7: Process each expedition to calculate kitCount and totalWeight.
+    List<Expedition> tempExpeditions = [];
+    for (Expedition expedition in baseExpeditions) {
+      List<Map<String, dynamic>> relationsForThisExpedition = allExpeditionKitRelationMaps
+          .where((relMap) => relMap['expeditionId'] == expedition.id)
+          .toList();
+
+      int kitCount = relationsForThisExpedition.length;
+      double expeditionTotalWeight = 0.0;
+
+      for (var relMap in relationsForThisExpedition) {
+        expeditionTotalWeight += kitTotalWeights[relMap['kitId']] ?? 0.0;
+      }
+      tempExpeditions.add(expedition.copyWith(kitCount: kitCount, totalWeight: expeditionTotalWeight));
+    }
+
+    _allExpeditions = tempExpeditions;
     _filterExpeditions(); // Apply filter
 
     if(mounted){
