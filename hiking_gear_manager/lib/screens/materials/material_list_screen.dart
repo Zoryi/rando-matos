@@ -1,33 +1,53 @@
 import 'package:flutter/material.dart';
 import '../../database/database_helper.dart';
 import '../../models.dart'; // Barrel file for models (provides AppMaterial, Category)
+import '../../widgets/empty_state_message.dart'; // Import the reusable widget
 import 'add_edit_material_screen.dart'; // Import the new screen
-import '../kits/kit_list_screen.dart'; // Import for navigation to KitListScreen
 
 class MaterialListScreen extends StatefulWidget {
-  const MaterialListScreen({super.key});
+  const MaterialListScreen({Key? key}) : super(key: key); // Updated constructor
 
   @override
-  _MaterialListScreenState createState() => _MaterialListScreenState();
+  MaterialListScreenState createState() => MaterialListScreenState(); // Public state class
 }
 
-class _MaterialListScreenState extends State<MaterialListScreen> {
-  List<AppMaterial> _materials = []; // Using AppMaterial
+class MaterialListScreenState extends State<MaterialListScreen> { // Public state class
+  List<AppMaterial> _allMaterials = []; // Renamed from _materials
+  List<AppMaterial> _filteredMaterials = [];
   List<Category> _categories = [];
   final DatabaseHelper _dbHelper = DatabaseHelper.instance;
+  final TextEditingController _searchController = TextEditingController();
+  bool _isInitiallyLoading = true;
+
 
   @override
   void initState() {
     super.initState();
-    _loadScreenData();
+    loadScreenData(); // Public method
+    _searchController.addListener(_filterMaterials);
   }
 
-  Future<void> _loadScreenData() async {
-    await _loadCategories();
-    await _loadMaterials();
+  @override
+  void dispose() {
+    _searchController.removeListener(_filterMaterials);
+    _searchController.dispose();
+    super.dispose();
   }
 
-  Future<void> _loadCategories() async {
+  Future<void> loadScreenData() async { // Public method
+    if (!mounted) return;
+    setState(() {
+      _isInitiallyLoading = true;
+    });
+    await loadCategories(); // Public method
+    await loadMaterials(); // Public method
+    if (!mounted) return;
+    setState(() {
+      _isInitiallyLoading = false;
+    });
+  }
+
+  Future<void> loadCategories() async { // Public method
     final db = await _dbHelper.database;
     final List<Map<String, dynamic>> categoryMaps = await db.query(DatabaseHelper.tableCategories);
     if (!mounted) return;
@@ -38,23 +58,38 @@ class _MaterialListScreenState extends State<MaterialListScreen> {
     });
   }
 
-  Future<void> _loadMaterials() async {
+  Future<void> loadMaterials() async { // Public method
     final db = await _dbHelper.database;
     final List<Map<String, dynamic>> materialMaps = await db.query(DatabaseHelper.tableMaterials);
     if (!mounted) return;
+    _allMaterials = List.generate(materialMaps.length, (i) {
+      return AppMaterial.fromMap(materialMaps[i]); // Using AppMaterial.fromMap
+    });
+    _filterMaterials(); // Apply filter after loading
+  }
+
+  void _filterMaterials() {
+    final query = _searchController.text.toLowerCase();
+    if (!mounted) return;
     setState(() {
-      _materials = List.generate(materialMaps.length, (i) {
-        return AppMaterial.fromMap(materialMaps[i]); // Using AppMaterial.fromMap
-      });
+      if (query.isEmpty) {
+        _filteredMaterials = List.from(_allMaterials);
+      } else {
+        _filteredMaterials = _allMaterials
+            .where((material) =>
+                material.name.toLowerCase().contains(query) ||
+                getCategoryName(material.categoryId).toLowerCase().contains(query))
+            .toList();
+      }
     });
   }
 
-  String _getCategoryName(int categoryId) {
+  String getCategoryName(int categoryId) { // Public method
     final category = _categories.firstWhere((cat) => cat.id == categoryId, orElse: () => Category(id: -1, name: 'Unknown'));
     return category.name;
   }
 
-  Future<void> _navigateToAditEditScreen({AppMaterial? material}) async {
+  Future<void> navigateToAditEditScreen({AppMaterial? material}) async { // Public method
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
@@ -62,11 +97,12 @@ class _MaterialListScreenState extends State<MaterialListScreen> {
       ),
     );
     if (result == true) { // If save was successful
-      _loadMaterials(); // Refresh the list
+      // loadMaterials() is called by loadScreenData, which also handles categories and initial loading state
+      loadScreenData();
     }
   }
 
-  Future<void> _deleteMaterial(int materialId) async {
+  Future<void> deleteMaterial(int materialId) async { // Public method
     // Show confirmation dialog
     final bool? confirmDelete = await showDialog<bool>(
       context: context,
@@ -90,64 +126,107 @@ class _MaterialListScreenState extends State<MaterialListScreen> {
 
     if (confirmDelete == true) {
       await _dbHelper.delete(materialId, DatabaseHelper.tableMaterials);
-      _loadMaterials(); // Refresh the list
+      loadMaterials(); // Refresh the list
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Materials'),
-         actions: <Widget>[
-            IconButton(
-                icon: const Icon(Icons.refresh),
-                onPressed: _loadScreenData, // Calls _loadCategories then _loadMaterials
-                tooltip: 'Refresh List',
-            ),
-            IconButton(
-              icon: const Icon(Icons.backpack_outlined), // Icon for kits
-              tooltip: 'View Kits',
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const KitListScreen()),
-                );
-              },
-            ),
-        ],
-      ),
-      body: ListView.builder(
-        itemCount: _materials.length,
+    // Scaffold and FAB removed, AppShell provides them.
+
+    Widget content;
+    if (_isInitiallyLoading) {
+      content = const Center(child: CircularProgressIndicator());
+    } else if (_allMaterials.isEmpty) {
+      content = const EmptyStateMessage(
+        icon: Icons.inventory_2_outlined,
+        message: "No Materials Yet",
+        callToAction: "Tap the '+' button in the AppBar to add your first material!",
+      );
+    } else if (_filteredMaterials.isEmpty && _searchController.text.isNotEmpty) {
+      content = EmptyStateMessage(
+        icon: Icons.search_off_outlined,
+        message: "No Materials Found",
+        callToAction: "No materials match '${_searchController.text}'. Try a different search.",
+      );
+    } else {
+      content = ListView.builder(
+        itemCount: _filteredMaterials.length,
         itemBuilder: (context, index) {
-          final material = _materials[index]; // material is AppMaterial
-          return ListTile(
-            title: Text(material.name),
-            subtitle: Text('Category: ${_getCategoryName(material.categoryId)} - Weight: ${material.weight}g'),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
+          final material = _filteredMaterials[index]; // Use filtered list
+          return Card(
+            // Card properties will be picked up from theme if defined in main.dart
+            child: ListTile(
+              title: Text(material.name),
+              subtitle: Text('Category: ${getCategoryName(material.categoryId)} - Weight: ${material.weight}g'), // Public method
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
               children: <Widget>[
                 IconButton(
                   icon: const Icon(Icons.edit),
                   tooltip: 'Edit Material',
-                  onPressed: () => _navigateToAditEditScreen(material: material),
+                  onPressed: () => navigateToAditEditScreen(material: material), // Public method
                 ),
                 IconButton(
                   icon: const Icon(Icons.delete),
                   tooltip: 'Delete Material',
-                  onPressed: () => _deleteMaterial(material.id!), // id should not be null here
+                  onPressed: () => deleteMaterial(material.id!), // Public method // id should not be null here
                 ),
               ],
             ),
-            onTap: () => _navigateToAditEditScreen(material: material), // Also allow tap on tile to edit
+            onTap: () => navigateToAditEditScreen(material: material), // Public method // Also allow tap on tile to edit
+            ),
           );
         },
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _navigateToAditEditScreen(), // For adding new material
-        tooltip: 'Add Material',
-        child: const Icon(Icons.add),
-      ),
+      );
+    }
+
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: TextField(
+            controller: _searchController,
+            decoration: InputDecoration(
+              labelText: 'Search Materials',
+              hintText: 'Search by name or category...',
+              prefixIcon: const Icon(Icons.search),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8.0),
+              ),
+              // Add a clear button to the search bar
+              suffixIcon: _searchController.text.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear),
+                      onPressed: () {
+                        _searchController.clear();
+                        // _filterMaterials(); // Already handled by listener
+                      },
+                    )
+                  : null,
+            ),
+          ),
+        ),
+        Expanded(
+          child: content,
+        ),
+      ],
+            children: <Widget>[
+              IconButton(
+                icon: const Icon(Icons.edit),
+                tooltip: 'Edit Material',
+                onPressed: () => navigateToAditEditScreen(material: material), // Public method
+              ),
+              IconButton(
+                icon: const Icon(Icons.delete),
+                tooltip: 'Delete Material',
+                onPressed: () => deleteMaterial(material.id!), // Public method // id should not be null here
+              ),
+            ],
+          ),
+          onTap: () => navigateToAditEditScreen(material: material), // Public method // Also allow tap on tile to edit
+        );
+      },
     );
   }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../database/database_helper.dart'; // Adjust import path as needed
 import '../../models.dart'; // Adjust import path for your models barrel file
+import '../../widgets/empty_state_message.dart'; // Import the reusable widget
 import '../materials/material_list_screen.dart'; // Import for navigation
 
 class CategoryListScreen extends StatefulWidget {
@@ -103,16 +104,24 @@ class _CategoryListScreenState extends State<CategoryListScreen> {
           ),
         ],
       ),
-      body: ListView.builder(
-        itemCount: _categories.length,
-        itemBuilder: (context, index) {
-          final category = _categories[index];
-          return ListTile(
-            title: Text(category.name),
-            // Add trailing delete iconButton later if needed
-          );
-        },
-      ),
+      body: _categories.isEmpty
+          ? const EmptyStateMessage(
+              icon: Icons.category_outlined,
+              message: "No Categories Found",
+              callToAction: "Tap the '+' button below to add a category.",
+            )
+          : ListView.builder(
+              itemCount: _categories.length,
+              itemBuilder: (context, index) {
+                final category = _categories[index];
+                return Card(
+                  child: ListTile(
+                    title: Text(category.name),
+                    // Add trailing delete iconButton later if needed
+                  ),
+                );
+              },
+            ),
       floatingActionButton: FloatingActionButton(
         onPressed: _showAddCategoryDialog,
         tooltip: 'Add Category', // tooltip before child

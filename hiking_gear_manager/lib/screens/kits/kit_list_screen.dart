@@ -1,43 +1,127 @@
 import 'package:flutter/material.dart';
 import '../../database/database_helper.dart';
 import '../../models.dart'; // Barrel file for models
+import '../../widgets/empty_state_message.dart'; // Import the reusable widget
 import 'add_edit_kit_screen.dart'; // Import the new screen
 import 'kit_detail_screen.dart'; // Import the new screen
-import '../expeditions/expedition_list_screen.dart'; // Import for navigation
 
 class KitListScreen extends StatefulWidget {
-  const KitListScreen({super.key});
+  const KitListScreen({Key? key}) : super(key: key); // Updated constructor
 
   @override
-  _KitListScreenState createState() => _KitListScreenState();
+  KitListScreenState createState() => KitListScreenState(); // Public state class
 }
 
-class _KitListScreenState extends State<KitListScreen> {
-  List<Kit> _kits = [];
+class KitListScreenState extends State<KitListScreen> { // Public state class
+  List<Kit> _allKits = []; // Renamed from _kits
+  List<Kit> _filteredKits = [];
   final DatabaseHelper _dbHelper = DatabaseHelper.instance;
+  final TextEditingController _searchController = TextEditingController();
+  bool _isInitiallyLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _loadKits();
+    loadKits(); // Public method
+    _searchController.addListener(_filterKits);
   }
 
-  Future<void> _loadKits() async {
-    final db = await _dbHelper.database;
-    final List<Map<String, dynamic>> kitMaps = await db.query(DatabaseHelper.tableKits);
+  @override
+  void dispose() {
+    _searchController.removeListener(_filterKits);
+    _searchController.dispose();
+    super.dispose();
+  }
 
-    List<Kit> tempKits = [];
-    for (var kitMap in kitMaps) {
-      Kit kit = Kit.fromMap(kitMap);
-      tempKits.add(kit);
-    }
+  Future<void> loadKits() async { // Public method
     if (!mounted) return;
     setState(() {
-      _kits = tempKits;
+      _isInitiallyLoading = true;
+    });
+
+    final db = await _dbHelper.database;
+
+    // Step 1: Fetch all kits
+    final List<Map<String, dynamic>> kitMaps = await db.query(DatabaseHelper.tableKits);
+    List<Kit> baseKits = kitMaps.map((map) => Kit.fromMap(map)).toList();
+
+    if (baseKits.isEmpty) {
+      _allKits = [];
+      _filterKits();
+      if (mounted) {
+        setState(() {
+          _isInitiallyLoading = false;
+        });
+      }
+      return;
+    }
+
+    // Step 2: Fetch all Kit-Material relations in one go.
+    final List<Map<String, dynamic>> allKitMaterialRelationMaps = await db.query(DatabaseHelper.tableKitMaterials);
+    // Assuming KitMaterialRelation has kitId and materialId fields
+    // For simplicity, we'll work with these maps directly or define a simple helper class/record if needed.
+
+    // Step 3: Fetch all unique materials that are part of any kit in one go.
+    Set<int> allMaterialIds = allKitMaterialRelationMaps.map((map) => map['materialId'] as int).toSet();
+
+    Map<int, AppMaterial> materialsMap = {};
+    if (allMaterialIds.isNotEmpty) {
+      // Using a list directly for whereArgs if sqflite supports it,
+      // otherwise, placeholders are needed. Sqflite typically handles lists.
+      final List<Map<String, dynamic>> materialDetailMaps = await db.query(
+        DatabaseHelper.tableMaterials,
+        where: '${DatabaseHelper.columnId} IN (${List.filled(allMaterialIds.length, '?').join(',')})',
+        whereArgs: allMaterialIds.toList(),
+      );
+      List<AppMaterial> allMaterialsInKits = materialDetailMaps.map((map) => AppMaterial.fromMap(map)).toList();
+      materialsMap = {for (var m in allMaterialsInKits) m.id!: m};
+    }
+
+    // Step 4: Process each kit to calculate materialCount and totalWeight
+    List<Kit> tempKits = [];
+    for (Kit kit in baseKits) {
+      int materialCount = 0;
+      double totalWeight = 0.0;
+
+      List<Map<String, dynamic>> relationsForThisKit = allKitMaterialRelationMaps
+          .where((relMap) => relMap['kitId'] == kit.id)
+          .toList();
+
+      materialCount = relationsForThisKit.length;
+
+      for (var relMap in relationsForThisKit) {
+        AppMaterial? material = materialsMap[relMap['materialId']];
+        if (material != null) {
+          totalWeight += material.weight;
+        }
+      }
+      tempKits.add(kit.copyWith(materialCount: materialCount, totalWeight: totalWeight));
+    }
+
+    _allKits = tempKits;
+    _filterKits(); // Apply filter after loading
+
+    if (!mounted) return;
+    setState(() {
+      _isInitiallyLoading = false;
     });
   }
 
-  Future<void> _navigateToAditEditKitScreen({Kit? kit}) async {
+  void _filterKits() {
+    final query = _searchController.text.toLowerCase();
+    if (!mounted) return;
+    setState(() {
+      if (query.isEmpty) {
+        _filteredKits = List.from(_allKits);
+      } else {
+        _filteredKits = _allKits
+            .where((kit) => kit.name.toLowerCase().contains(query))
+            .toList();
+      }
+    });
+  }
+
+  Future<void> navigateToAditEditKitScreen({Kit? kit}) async { // Public method
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
@@ -45,11 +129,11 @@ class _KitListScreenState extends State<KitListScreen> {
       ),
     );
     if (result == true) { // If save was successful
-      _loadKits(); // Refresh the list
+      loadKits(); // Refresh the list
     }
   }
 
-  Future<void> _deleteKit(int kitId) async {
+  Future<void> deleteKit(int kitId) async { // Public method
     final bool? confirmDelete = await showDialog<bool>(
       context: context,
       builder: (BuildContext context) {
@@ -66,11 +150,11 @@ class _KitListScreenState extends State<KitListScreen> {
 
     if (confirmDelete == true) {
       await _dbHelper.delete(kitId, DatabaseHelper.tableKits);
-      _loadKits();
+      loadKits(); // Refresh the list
     }
   }
 
-  void _navigateToKitDetailScreen(Kit kit) {
+  void navigateToKitDetailScreen(Kit kit) { // Public method
     Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => KitDetailScreen(kit: kit)), // Use the correct screen
@@ -79,58 +163,96 @@ class _KitListScreenState extends State<KitListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Kits'),
-        actions: <Widget>[
-            IconButton(
-                icon: const Icon(Icons.refresh),
-                onPressed: _loadKits,
-                tooltip: 'Refresh List',
-            ),
-            IconButton(
-              icon: const Icon(Icons.hiking_outlined), // Icon for expeditions
-              tooltip: 'View Expeditions',
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const ExpeditionListScreen()),
-                );
-              },
-            ),
-        ],
-      ),
-      body: ListView.builder(
-        itemCount: _kits.length,
+    // Scaffold and FAB removed, AppShell provides them.
+    Widget content;
+    if (_isInitiallyLoading) {
+      content = const Center(child: CircularProgressIndicator());
+    } else if (_allKits.isEmpty) {
+      content = const EmptyStateMessage(
+        icon: Icons.backpack_outlined,
+        message: "No Kits Created",
+        callToAction: "Tap the '+' button in the AppBar to create your first kit!",
+      );
+    } else if (_filteredKits.isEmpty && _searchController.text.isNotEmpty) {
+      content = EmptyStateMessage(
+        icon: Icons.search_off_outlined,
+        message: "No Kits Found",
+        callToAction: "No kits match '${_searchController.text}'. Try a different search.",
+      );
+    } else {
+      content = ListView.builder(
+        itemCount: _filteredKits.length,
         itemBuilder: (context, index) {
-          final kit = _kits[index];
-          return ListTile(
-            title: Text(kit.name),
-            subtitle: const Text("Tap to view details, swipe for actions"), // Placeholder
-            onTap: () => _navigateToKitDetailScreen(kit),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
+          final kit = _filteredKits[index]; // Use filtered list
+          return Card(
+            child: ListTile(
+              title: Text(kit.name),
+              subtitle: Text('Materials: ${kit.materialCount ?? 0} - Weight: ${kit.totalWeight?.toStringAsFixed(1) ?? "0.0"}g'),
+              onTap: () => navigateToKitDetailScreen(kit), // Public method
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
               children: <Widget>[
                 IconButton(
                   icon: const Icon(Icons.edit),
                   tooltip: 'Edit Kit',
-                  onPressed: () => _navigateToAditEditKitScreen(kit: kit),
+                  onPressed: () => navigateToAditEditKitScreen(kit: kit), // Public method
                 ),
                 IconButton(
                   icon: const Icon(Icons.delete),
                   tooltip: 'Delete Kit',
-                  onPressed: () => _deleteKit(kit.id!),
+                  onPressed: () => deleteKit(kit.id!), // Public method
                 ),
               ],
             ),
+            ),
           );
         },
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _navigateToAditEditKitScreen(),
-        tooltip: 'Add Kit',
-        child: const Icon(Icons.add),
-      ),
+      );
+    }
+
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: TextField(
+            controller: _searchController,
+            decoration: InputDecoration(
+              labelText: 'Search Kits',
+              hintText: 'Enter kit name...',
+              prefixIcon: const Icon(Icons.search),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8.0),
+              ),
+              suffixIcon: _searchController.text.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear),
+                      onPressed: () {
+                        _searchController.clear();
+                      },
+                    )
+                  : null,
+            ),
+          ),
+        ),
+        Expanded(
+          child: content,
+        ),
+      ],
+            children: <Widget>[
+              IconButton(
+                icon: const Icon(Icons.edit),
+                tooltip: 'Edit Kit',
+                onPressed: () => navigateToAditEditKitScreen(kit: kit), // Public method
+              ),
+              IconButton(
+                icon: const Icon(Icons.delete),
+                tooltip: 'Delete Kit',
+                onPressed: () => deleteKit(kit.id!), // Public method
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
