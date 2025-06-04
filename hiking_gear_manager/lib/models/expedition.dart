@@ -1,34 +1,45 @@
 // Similar to Kit, Expedition will have its own properties.
-// The list of Kits and total weight calculation will be handled at a higher level.
-
 class Expedition {
-  int? id;
-  String name;
-  // List<Kit> kits; // Managed by service/UI layer
+  final int? id;
+  final String name;
+  final int? kitCount;
+  final double? totalWeight;
 
   Expedition({
     this.id,
     required this.name,
-    // required this.kits, // Temporarily remove direct kit list here
+    this.kitCount,
+    this.totalWeight,
   });
-
-  // total_weight will be calculated dynamically.
-  // double calculateTotalWeight(List<Kit> kits, /* function to get kit weight */)
-  // This becomes more complex and depends on how Kit weights are resolved.
-  // For now, let's assume this logic is in the service layer.
 
   Map<String, dynamic> toMap() {
     return {
       'id': id,
       'name': name,
+      // kitCount and totalWeight are derived data, not stored in the main table.
     };
   }
 
   static Expedition fromMap(Map<String, dynamic> map) {
     return Expedition(
-      id: map['id'],
-      name: map['name'],
-      // kits are not directly stored in the Expedition table
+      id: map['id'] as int?,
+      name: map['name'] as String,
+      kitCount: map['kitCount'] as int?, // Will be null if not in map
+      totalWeight: map['totalWeight'] as double?, // Will be null if not in map
+    );
+  }
+
+  Expedition copyWith({
+    int? id,
+    String? name,
+    int? kitCount,
+    double? totalWeight,
+  }) {
+    return Expedition(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      kitCount: kitCount ?? this.kitCount,
+      totalWeight: totalWeight ?? this.totalWeight,
     );
   }
 }
