@@ -712,12 +712,15 @@
                 display: none;
             }
 
-            .item-details { /* For mobile view specifically within @media */
-                display: flex; /* Ensure it is flex */
-                align-items: flex-start; /* Align image to top of text block */
-                flex-grow: 1; /* Ensure it still grows */
-                margin-right: 10px; /* Keep reduced margin */
-                min-width: 0; /* Keep for shrinkability */
+            .item-details { /* mobile */
+                display: grid;
+                grid-template-columns: auto 1fr; /* Col1 for image, Col2 for text */
+                grid-template-rows: auto auto;    /* Row1 for name, Row2 for weight */
+                column-gap: 8px; /* Replaces img margin-right */
+                align-items: flex-start; /* Align items at the start of their grid area */
+                flex-grow: 1; /* Keep this from original flex item behavior */
+                margin-right: 10px; /* Keep this */
+                min-width: 0; /* Keep this */
             }
 
             .item-actions { /* For mobile view specifically within @media */
@@ -738,28 +741,34 @@
                 display: none;
             }
 
-            .item-details img {
-                width: 2.5rem; /* 40px, was 3rem/48px from w-12 */
-                height: 2.5rem; /* 40px, was 3rem/48px from h-12 */
-                margin-right: 8px; /* Reduce margin slightly from 10px */
+            .item-details img { /* mobile */
+                grid-column: 1;
+                grid-row: 1 / span 2; /* Image spans both text rows */
+                width: 2.5rem;
+                height: 2.5rem;
+                margin-right: 0; /* Gap handles spacing now */
             }
 
             .pack-name, .category-name { /* .item-name removed from this group */
                 font-size: 0.9rem; /* Slightly reduced from default */
             }
-            .item-name { /* Specific mobile style for item-name */
-                display: block;
+            .item-name { /* mobile */
+                grid-column: 2;
+                grid-row: 1;
                 font-size: 0.9rem;
+                /* display: block; is fine, or can be removed as grid item placement controls layout */
             }
             .pack-weight, .category-weight { /* .item-weight removed from this group */
                 font-size: 0.8rem; /* Slightly reduced from default 0.9rem */
                 color: #555; /* Ensure color is maintained if not inherited */
             }
-            .item-weight { /* Specific mobile style for item-weight */
-                display: block;
+            .item-weight { /* mobile */
+                grid-column: 2;
+                grid-row: 2;
                 font-size: 0.8rem;
                 color: #555;
-                margin-left: 0; /* Remove any potential inherited left margin */
+                margin-left: 0; /* Keep this */
+                /* display: block; is fine, or can be removed */
             }
 
             .item, .pack-item, .category-item {
