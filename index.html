@@ -713,8 +713,11 @@
             }
 
             .item-details { /* For mobile view specifically within @media */
-                min-width: 0; /* Allow shrinking below content size */
-                margin-right: 10px; /* Reduce margin slightly from 15px */
+                display: flex; /* Ensure it is flex */
+                align-items: flex-start; /* Align image to top of text block */
+                flex-grow: 1; /* Ensure it still grows */
+                margin-right: 10px; /* Keep reduced margin */
+                min-width: 0; /* Keep for shrinkability */
             }
 
             .item-actions { /* For mobile view specifically within @media */
@@ -741,12 +744,22 @@
                 margin-right: 8px; /* Reduce margin slightly from 10px */
             }
 
-            .item-name, .pack-name, .category-name {
+            .pack-name, .category-name { /* .item-name removed from this group */
                 font-size: 0.9rem; /* Slightly reduced from default */
             }
-            .item-weight, .pack-weight, .category-weight {
+            .item-name { /* Specific mobile style for item-name */
+                display: block;
+                font-size: 0.9rem;
+            }
+            .pack-weight, .category-weight { /* .item-weight removed from this group */
                 font-size: 0.8rem; /* Slightly reduced from default 0.9rem */
                 color: #555; /* Ensure color is maintained if not inherited */
+            }
+            .item-weight { /* Specific mobile style for item-weight */
+                display: block;
+                font-size: 0.8rem;
+                color: #555;
+                margin-left: 0; /* Remove any potential inherited left margin */
             }
 
             .item, .pack-item, .category-item {
