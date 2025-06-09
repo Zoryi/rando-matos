@@ -55,7 +55,6 @@
 
         // Get references to HTML elements (Pack Detail Section)
         const packDetailSection = document.getElementById('pack-detail-section');
-        const packDetailTitle = document.getElementById('pack-detail-title');
         const itemsInPackList = document.getElementById('items-in-pack-list');
         const availableItemsList = document.getElementById('available-items-list');
         const unpackAllButton = document.getElementById('unpack-all-button'); // New button reference

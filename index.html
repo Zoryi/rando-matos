@@ -19,36 +19,53 @@
             min-height: 100vh; /* Minimum height of the viewport */
         }
         .sidebar {
-            width: 250px; /* Fixed width sidebar */
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: auto;
+            min-height: 65px; /* Ensure minimum touch target area */
             background-color: #e9ecef; /* Light sidebar background */
-            padding: 20px;
-            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+            padding: 10px 0; /* Adjust as needed, less vertical padding */
+            box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.1); /* Shadow on top */
             display: flex;
-            flex-direction: column;
+            flex-direction: row;
+            align-items: center; /* To vertically align items if height is auto or larger */
+            z-index: 1000; /* Ensure sidebar is on top */
         }
         .sidebar h2 {
-            color: #005f73;
-            margin-bottom: 20px;
-            text-align: center;
+            display: none; /* Title not suitable for bottom nav bar */
         }
         .sidebar nav ul {
             list-style: none;
             padding: 0;
+            display: flex;
+            flex-direction: row;
+            justify-content: space-around; /* or space-evenly for different spacing */
+            width: 100%; /* Ensure it spans the full width of the sidebar */
         }
         .sidebar nav ul li {
-            margin-bottom: 10px;
+            margin-bottom: 0; /* Remove bottom margin as items are in a row */
+            flex-grow: 1;
+            flex-basis: 0;
         }
         .sidebar nav ul li a {
             display: flex; /* Use flex for icon and text alignment */
+            flex-direction: column; /* Icon over text */
             align-items: center;
-            padding: 10px 15px;
+            justify-content: center; /* Center content vertically */
+            padding: 10px 5px; /* Increase clickable area and vertical spacing */
             color: #333;
             text-decoration: none;
             border-radius: 8px; /* Rounded corners for menu items */
             transition: background-color 0.3s ease;
+            font-size: 0.85rem; /* Increase font size */
+            text-align: center; /* Center text if it wraps */
         }
          .sidebar nav ul li a i {
-             margin-right: 10px; /* Space between icon and text */
+             margin-right: 0; /* Remove margin as icon is above text */
+             margin-bottom: 4px; /* Space between icon and text */
+             font-size: 1.6em; /* Increase icon size */
          }
         .sidebar nav ul li a:hover {
             background-color: #d0d4d8; /* Slightly darker on hover */
@@ -65,6 +82,7 @@
             flex-grow: 1; /* Main content takes remaining space */
             padding: 20px;
             overflow-y: auto; /* Enable scrolling if content overflows */
+            padding-bottom: 75px; /* Adjusted to prevent overlap */
         }
         .content-section {
              background-color: #fff;
@@ -394,44 +412,29 @@
 
           /* Responsive adjustments */
          @media (max-width: 768px) {
-             body {
-                 flex-direction: column; /* Stack sidebar and content on small screens */
-             }
-             .sidebar {
-                 width: 100%; /* Full width sidebar on small screens */
-                 height: auto; /* Height adjusts to content */
-                 box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-             }
-             .sidebar nav ul {
-                 display: flex; /* Arrange menu items in a row */
-                 flex-wrap: wrap; /* Allow wrapping */
-                 justify-content: center; /* Center menu items */
-                 gap: 5px; /* Was 10px */
-             }
-             .sidebar nav ul li {
-                 margin-bottom: 0; /* Remove bottom margin */
-             }
-             .sidebar nav ul li a {
-                 padding: 6px 8px; /* Adjust padding */
-                 flex-direction: column; /* Stack icon and text */
-                 text-align: center;
-                 font-size: 0.8rem; /* Added font-size, reduced padding */
-             }
-             .sidebar nav ul li a i {
-                 margin-right: 0;
-                 margin-bottom: 5px; /* Space between icon and text */
-             }
+             /* body flex-direction: column; might not be needed anymore if sidebar is fixed bottom */
+             /* .sidebar width: 100% and height: auto are now default, so they can be removed if only for this */
+             /* .sidebar nav ul adjustments may not be needed or may need to align with new base row direction */
+             /* .sidebar nav ul li a adjustments may be redundant */
+
+             /* Example: If you want menu items to wrap on very small screens for the bottom bar */
+             /* .sidebar nav ul { flex-wrap: wrap; justify-content: center; } */
+
              .menu-weight {
-                 margin-left: 0; /* Remove auto margin */
-                 margin-top: 3px; /* Reduced margin-top */
-                 font-size: 0.7rem; /* Reduced font-size */
+                 /* Adjustments for menu weight if it was previously affected by sidebar changes */
+                 /* For instance, if it was hidden or repositioned, check its appearance in bottom nav */
+                 font-size: 0.7rem; /* Adjusted font-size */
+                 margin-left: 0; /* If it was pushed by auto margin */
+                 margin-top: 3px; /* Adjusted margin-top */
              }
              .main-content {
-                 padding: 15px; /* Adjust padding */
+                 padding: 15px; /* Adjust padding for smaller screens */
+                 padding-bottom: 75px; /* Ensure enough space for bottom nav on mobile - Adjusted */
              }
              .content-section {
                  padding: 20px; /* Adjust padding */
              }
+             /* .sidebar h2 { display: none; } is now a base style */
          }
 
 
@@ -737,9 +740,7 @@
                 gap: 15px; /* Optionally reduce gap slightly for single column */
             }
 
-            .sidebar h2 {
-                display: none;
-            }
+            /* .sidebar h2 { display: none; } is now a base style, already handled */
 
             .item-details img { /* mobile */
                 grid-column: 1;
@@ -793,22 +794,8 @@
 </head>
 <body>
 
-    <div class="sidebar">
-        <h2>Backpack Filler</h2>
-        <nav>
-            <ul>
-                <li><a href="#inventory" class="active" data-section="inventory"><i class="fas fa-boxes"></i> Mon Inventaire <span id="inventory-weight" class="menu-weight"></span></a></li>
-                <li><a href="#new-item" data-section="new-item"><i class="fas fa-plus-circle"></i> Ajouter un Item</a></li>
-                <li><a href="#manage-packs" data-section="manage-packs"><i class="fas fa-suitcase"></i> Packs</a></li>
-                 <li><a href="#manage-categories" data-section="manage-categories"><i class="fas fa-tags"></i> Catégories</a></li>
-                 <li><a href="#generate-pack-section" data-section="generate-pack"><i class="fas fa-magic"></i> Générer un Pack ✨</a></li>
-            </ul>
-        </nav>
-         </div>
-
     <div class="main-content">
         <div id="inventory-section" class="content-section active">
-            <h2>Mon Inventaire</h2>
              <select id="view-filter" class="mb-4 p-2 border rounded">
                  <option value="all">Voir tout</option>
                  <option value="categories">Voir par Catégorie</option>
@@ -821,7 +808,6 @@
         </div>
 
         <div id="new-item-section" class="content-section">
-            <h2>Ajouter un Nouvel Item</h2>
             <div class="form-grid">
                 <div class="form-group">
                     <label for="item-name">Nom de l'item</label>
@@ -864,7 +850,6 @@
         </div>
 
          <div id="manage-packs-section" class="content-section">
-            <h2>Gérer les Packs</h2>
             <div class="input-group"> <input type="text" id="pack-name" placeholder="Nom du nouveau Pack">
                 <button id="add-pack-button">Créer Pack</button>
             </div>
@@ -874,7 +859,6 @@
          </div>
 
          <div id="pack-detail-section" class="content-section">
-             <h2 id="pack-detail-title">Détails du Pack : </h2>
              <button id="unpack-all-button" class="unpack-all-button">Tout Déballer ce Pack</button> <div class="pack-detail-grid">
                  <div class="pack-detail-column">
                      <h3>Items dans ce Pack</h3>
@@ -890,7 +874,6 @@
          </div>
 
          <div id="manage-categories-section" class="content-section">
-             <h2>Gérer les Catégories</h2>
              <div class="input-group"> <input type="text" id="category-name" placeholder="Nom de la nouvelle Catégorie">
                  <button id="add-category-button">Créer Catégorie</button>
              </div>
@@ -900,7 +883,6 @@
          </div>
 
          <div id="generate-pack-section" class="content-section">
-             <h2>Générer une Liste de Pack ✨</h2>
              <div class="form-grid">
                  <div class="form-group">
                      <label for="gen-pack-destination">Destination (lieu ou type de terrain)</label>
@@ -995,6 +977,19 @@
 
 
     </div>
+
+    <div class="sidebar">
+        <h2>Backpack Filler</h2>
+        <nav>
+            <ul>
+                <li><a href="#inventory" class="active" data-section="inventory"><i class="fas fa-boxes"></i> Stock <span id="inventory-weight" class="menu-weight"></span></a></li>
+                <li><a href="#new-item" data-section="new-item"><i class="fas fa-plus-circle"></i> Ajouter un Item</a></li>
+                <li><a href="#manage-packs" data-section="manage-packs"><i class="fas fa-suitcase"></i> Packs</a></li>
+                 <li><a href="#manage-categories" data-section="manage-categories"><i class="fas fa-tags"></i> Catégories</a></li>
+                 <li><a href="#generate-pack-section" data-section="generate-pack"><i class="fas fa-magic"></i> Générer un Pack ✨</a></li>
+            </ul>
+        </nav>
+         </div>
 
     <script src="app.js"></script>
     <script>
