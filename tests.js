@@ -16,11 +16,9 @@ const mockLocalStorage = {
 const originalLocalStorage = window.localStorage;
 window.localStorage = mockLocalStorage;
 
-function runTests() {
-  /*
-  QUnit.module('Item Management', hooks => {
-    hooks.beforeEach(() => {
-      // Reset items array and localStorage before each test in this module
+QUnit.module('Item Management', hooks => {
+  hooks.beforeEach(() => {
+    // Reset items array and localStorage before each test in this module
     items = [];
     packs = [];
     categories = [];
@@ -29,78 +27,52 @@ function runTests() {
     // For functions like addItem, they might use global input variables.
     // We need to ensure these are defined or mock them.
 
-    // DOM elements are now in tests.html #qunit-fixture
-    // Clear input fields that might persist from previous tests
-    document.getElementById('item-name').value = '';
-    document.getElementById('item-weight').value = '';
-    document.getElementById('item-brand').value = '';
-    document.getElementById('item-category').value = '';
-    document.getElementById('item-tags').value = '';
-    document.getElementById('item-capacity').value = '';
-    document.getElementById('item-image-url').value = '';
-    document.getElementById('item-consumable').checked = false;
-    document.getElementById('new-item-image-preview').style.display = 'none';
+    // Mocking DOM elements and inputs (very basic for now)
+    // These would ideally be in QUnit.fixture if DOM manipulation is heavy.
+    window.newItemNameInput = { value: '' };
+    window.newItemWeightInput = { value: '' };
+    window.newItemBrandInput = { value: '' };
+    window.newItemCategorySelect = { value: '' };
+    window.newItemTagsInput = { value: '' };
+    window.newItemCapacityInput = { value: '' };
+    window.newItemImageUrlInput = { value: '' };
+    window.newItemConsumableInput = { checked: false };
+    window.newItemImagePreview = { style: { display: '' } };
 
-    document.getElementById('edit-item-name').value = '';
-    document.getElementById('edit-item-weight').value = '';
-    document.getElementById('edit-item-brand').value = '';
-    document.getElementById('edit-item-category').value = '';
-    document.getElementById('edit-item-tags').value = '';
-    document.getElementById('edit-item-capacity').value = '';
-    document.getElementById('edit-item-image-url').value = '';
-    document.getElementById('edit-item-consumable').checked = false;
-    document.getElementById('edit-item-image-preview').style.display = 'none';
-    document.getElementById('editing-item-id').value = '';
+    window.editItemNameInput = { value: '' };
+    window.editItemWeightInput = { value: '' };
+    window.editItemBrandInput = { value: '' };
+    window.editItemCategorySelect = { value: '' };
+    window.editItemTagsInput = { value: '' };
+    window.editItemCapacityInput = { value: '' };
+    window.editItemImageUrlInput = { value: '' };
+    window.editItemConsumableInput = { checked: false };
+    window.editItemImagePreview = { style: { display: '' } };
+    window.editingItemIdInput = { value: '' };
 
-    document.getElementById('pack-name').value = '';
-    document.getElementById('category-name').value = '';
 
+    window.itemListElement = { innerHTML: '' };
+    window.totalWeightElement = { textContent: '' };
+    window.inventoryWeightElement = { textContent: '' };
+    window.packListElement = { innerHTML: '' };
+    window.categoryManagementListElement = { innerHTML: '' };
+    window.viewFilterSelect = { querySelectorAll: () => [], appendChild: () => {}, value: 'all' };
 
     // Mock functions that might be called within the tested functions if not testing them directly here
-    // renderAll is a heavy DOM manipulator, mock it for unit tests not specifically testing rendering.
-    // However, for some tests (like deleteItem), the actual renderAll might be needed to see effects.
-    // For now, keep it mocked. If specific rendering tests fail, we might un-mock it for those.
-    window.renderAll = () => {
-        // console.log("Mock renderAll called");
-        // Optionally, add basic checks here if certain elements are expected to be updated by renderAll
-        // For example, if total weight is part of a test:
-        if (window.totalWeightElement && items) { // Check if totalWeightElement is defined
-             const totalWeight = items.reduce((sum, item) => sum + item.weight, 0);
-             document.getElementById('total-weight').textContent = `Poids Total : ${totalWeight} g`;
-        }
-        if (window.inventoryWeightElement && items) { // Check if inventoryWeightElement is defined
-            const totalWeight = items.reduce((sum, item) => sum + item.weight, 0);
-            document.getElementById('inventory-weight').textContent = `${totalWeight}g`;
-        }
-    };
-    window.updateCategoryDropdowns = () => { / console.log("Mock updateCategoryDropdowns called"); / };
-    window.updateImagePreview = () => { / console.log("Mock updateImagePreview called"); / };
-    window.initializeSortableLists = () => { / console.log("Mock initializeSortableLists called"); / };
-    // saveData and loadData are now globally available from app.js
-    window.renderPacks = () => { / console.log("Mock renderPacks called"); / };
-    window.renderCategories = () => { / console.log("Mock renderCategories called"); / };
-    window.renderCategoryManagement = () => { / console.log("Mock renderCategoryManagement called"); / };
-    window.updateViewFilterOptions = () => { / console.log("Mock updateViewFilterOptions called"); / };
-    window.renderPackDetail = () => { / console.log("Mock renderPackDetail called"); / };
-
-
-    // Ensure necessary global variables from app.js are initialized if they are not already
-    // For example, if app.js declares `let currentManagingPackId = null;` at the top level,
-    // it's already available. If it's within a DOMContentLoaded, tests might need to set it.
-    // For these tests, `currentManagingPackId` is set in the 'Item Packing' module.
+    window.renderAll = () => {}; // Mock renderAll to prevent errors if called
+    window.updateCategoryDropdowns = () => {};
+    window.updateImagePreview = () => {};
+    window.saveData = saveData; // Use the actual saveData
+    window.loadData = loadData; // Use the actual loadData
   });
 
   QUnit.test('addItem function: should add an item to the items array and save', assert => {
-    document.getElementById('item-name').value = 'Test Tent';
-    document.getElementById('item-weight').value = '1200';
-    document.getElementById('item-brand').value = 'TestBrand';
-    document.getElementById('item-category').value = 'Camping';
-
+    newItemNameInput.value = 'Test Tent';
+    newItemWeightInput.value = '1200';
+    newItemBrandInput.value = 'TestBrand';
+    newItemCategorySelect.value = 'Camping';
     // Ensure 'Camping' category exists for the test or is added by addItem's logic
-    // If addItem is expected to create categories, this line is not needed.
-    // For this test, let's assume categories can be pre-existing.
     categories.push({ name: 'Camping' });
-    // If updateCategoryDropdowns was real, it would populate the select. For addItem, it just reads the value.
 
     addItem();
 
@@ -108,7 +80,7 @@ function runTests() {
     assert.strictEqual(items[0].name, 'Test Tent', 'Item name should be correct');
     assert.strictEqual(items[0].weight, 1200, 'Item weight should be correct');
     assert.strictEqual(items[0].brand, 'TestBrand', 'Item brand should be correct');
-    assert.strictEqual(items[0].category, 'Camping', 'Item category should be correct'); // Assuming category is added if not exists or selected
+    assert.strictEqual(items[0].category, 'Camping', 'Item category should be correct');
     assert.deepEqual(items[0].packIds, [], 'Item packIds should be empty initially');
     assert.false(items[0].packed, 'Item should not be packed initially');
 
@@ -119,11 +91,11 @@ function runTests() {
   });
 
   QUnit.test('addItem function: should not add item if name is empty', assert => {
-    document.getElementById('item-name').value = ''; // Empty name
-    document.getElementById('item-weight').value = '100';
+    newItemNameInput.value = ''; // Empty name
+    newItemWeightInput.value = '100';
     // Mock alert so test doesn't hang
     const originalAlert = window.alert;
-    window.alert = () => { / console.log("Mock alert for empty name"); / };
+    window.alert = () => {};
     addItem();
     window.alert = originalAlert; // Restore alert
 
@@ -131,17 +103,17 @@ function runTests() {
   });
 
   QUnit.test('addItem function: should not add item if weight is invalid', assert => {
-    document.getElementById('item-name').value = 'Invalid Weight Item';
-    document.getElementById('item-weight').value = '-100'; // Invalid weight
+    newItemNameInput.value = 'Invalid Weight Item';
+    newItemWeightInput.value = '-100'; // Invalid weight
     const originalAlert = window.alert;
-    window.alert = () => { / console.log("Mock alert for invalid weight - negative"); / };
+    window.alert = () => {};
     addItem();
     window.alert = originalAlert;
 
     assert.strictEqual(items.length, 0, 'No item should be added if weight is negative');
 
-    document.getElementById('item-weight').value = 'abc'; // Invalid weight
-    window.alert = () => { / console.log("Mock alert for invalid weight - NaN"); / };
+    newItemWeightInput.value = 'abc'; // Invalid weight
+    window.alert = () => {};
     addItem();
     window.alert = originalAlert;
     assert.strictEqual(items.length, 0, 'No item should be added if weight is not a number');
@@ -150,7 +122,7 @@ function runTests() {
 
   QUnit.test('deleteItem function: should remove an item from the items array and save', assert => {
     // Add an item first
-    items.push({ id: 'item-to-delete', name: 'DeleteMe', weight: 100, packIds: [], packed: false, category: '' });
+    items.push({ id: 'item-to-delete', name: 'DeleteMe', weight: 100, packIds: [], packed: false });
     saveData(); // Save initial state
 
     // Mock confirm to always return true for deletion
@@ -165,7 +137,7 @@ function runTests() {
   });
 
   QUnit.test('deleteItem function: should not delete if confirm is false', assert => {
-    items.push({ id: 'item-not-deleted', name: 'KeepMe', weight: 100, packIds: [], packed: false, category: '' });
+    items.push({ id: 'item-not-deleted', name: 'KeepMe', weight: 100, packIds: [], packed: false });
     saveData();
 
     const originalConfirm = window.confirm;
@@ -183,15 +155,15 @@ QUnit.module('Pack Management', hooks => {
     packs = [];
     categories = [];
     mockLocalStorage.clear();
-    document.getElementById('pack-name').value = '';
-    // window.packListElement = { innerHTML: '' }; // Mocked by #qunit-fixture
-    // window.renderPacks = () => {}; // Mocked globally
-    // window.updateViewFilterOptions = () => {}; // Mocked globally
-    // saveData is now globally available
+    window.packNameInput = { value: '' };
+    window.packListElement = { innerHTML: '' }; // Mock
+    window.renderPacks = () => {}; // Mock
+    window.updateViewFilterOptions = () => {}; // Mock
+    window.saveData = saveData;
   });
 
   QUnit.test('addPack function: should add a pack to the packs array and save', assert => {
-    document.getElementById('pack-name').value = 'My Test Pack';
+    packNameInput.value = 'My Test Pack';
     addPack();
 
     assert.strictEqual(packs.length, 1, 'One pack should be added');
@@ -204,9 +176,9 @@ QUnit.module('Pack Management', hooks => {
   });
 
   QUnit.test('addPack function: should not add pack if name is empty', assert => {
-    document.getElementById('pack-name').value = '';
+    packNameInput.value = '';
     const originalAlert = window.alert;
-    window.alert = () => { / console.log("Mock alert for empty pack name"); / };
+    window.alert = () => {};
     addPack();
     window.alert = originalAlert;
 
@@ -225,12 +197,12 @@ QUnit.module('Pack Management', hooks => {
     window.confirm = originalConfirm;
 
     assert.strictEqual(packs.length, 0, 'Pack should be deleted');
-    assert.deepEqual(items.find(i => i.id === 'item1').packIds, [], 'Pack ID should be removed from item1 packIds');
+    assert.deepEqual(items[0].packIds, [], 'Pack ID should be removed from item1 packIds');
 
     const storedPacks = JSON.parse(mockLocalStorage.getItem('backpackPacks'));
     assert.ok(storedPacks === null || storedPacks.length === 0, 'Pack should be removed from localStorage');
     const storedItems = JSON.parse(mockLocalStorage.getItem('backpackItems'));
-    assert.deepEqual(storedItems.find(i => i.id === 'item1').packIds, [], 'Item in localStorage should also be updated');
+    assert.deepEqual(storedItems[0].packIds, [], 'Item in localStorage should also be updated');
   });
 });
 
@@ -241,14 +213,14 @@ QUnit.module('Category Management', hooks => {
     packs = [];
     categories = [];
     mockLocalStorage.clear();
-    document.getElementById('category-name').value = '';
-    // window.renderCategoryManagement = () => {}; // Mocked globally
-    // window.updateCategoryDropdowns = () => {}; // Mocked globally
-    // saveData is now globally available
+    window.categoryNameInput = { value: '' }; // Mock input
+    window.renderCategoryManagement = () => {}; // Mock render function
+    window.updateCategoryDropdowns = () => {}; // Mock
+    window.saveData = saveData;
   });
 
   QUnit.test('addCategory function: should add a category and save', assert => {
-    document.getElementById('category-name').value = 'New Category';
+    categoryNameInput.value = 'New Category';
     addCategory();
 
     assert.strictEqual(categories.length, 1, 'One category should be added');
@@ -259,9 +231,9 @@ QUnit.module('Category Management', hooks => {
   });
 
   QUnit.test('addCategory function: should not add category if name is empty', assert => {
-    document.getElementById('category-name').value = '';
+    categoryNameInput.value = '';
     const originalAlert = window.alert;
-    window.alert = () => { / console.log("Mock alert for empty cat name"); / };
+    window.alert = () => {};
     addCategory();
     window.alert = originalAlert;
     assert.strictEqual(categories.length, 0, 'No category should be added if name is empty');
@@ -269,10 +241,9 @@ QUnit.module('Category Management', hooks => {
 
   QUnit.test('addCategory function: should not add duplicate category (case-insensitive)', assert => {
     categories.push({ name: 'Existing Category' });
-    saveData(); // Save the initial category
-    document.getElementById('category-name').value = 'existing category'; // Same name, different case
+    categoryNameInput.value = 'existing category'; // Same name, different case
     const originalAlert = window.alert;
-    window.alert = () => { / console.log("Mock alert for duplicate cat name"); / };
+    window.alert = () => {};
     addCategory();
     window.alert = originalAlert;
     assert.strictEqual(categories.length, 1, 'Duplicate category should not be added');
@@ -290,13 +261,13 @@ QUnit.module('Category Management', hooks => {
     window.confirm = originalConfirm;
 
     assert.strictEqual(categories.length, 0, 'Category should be deleted');
-    assert.strictEqual(items.find(i=>i.id === 'item1').category, '', 'Item1 category should be cleared');
-    assert.strictEqual(items.find(i=>i.id === 'item2').category, 'OtherCategory', 'Item2 category should remain unchanged');
+    assert.strictEqual(items[0].category, '', 'Item1 category should be cleared');
+    assert.strictEqual(items[1].category, 'OtherCategory', 'Item2 category should remain unchanged');
 
     const storedCategories = JSON.parse(mockLocalStorage.getItem('backpackCategories'));
      assert.ok(storedCategories === null || storedCategories.length === 0, 'Category should be removed from localStorage');
     const storedItems = JSON.parse(mockLocalStorage.getItem('backpackItems'));
-    assert.strictEqual(storedItems.find(i=>i.id === 'item1').category, '', 'Item category in localStorage should be updated');
+    assert.strictEqual(storedItems[0].category, '', 'Item category in localStorage should be updated');
   });
 });
 
@@ -475,26 +446,8 @@ QUnit.module('Item Packing and Pack Detail Logic', hooks => {
   });
 
 });
-*/
-  // Restore original localStorage after tests are done
-  QUnit.done(() => {
-    window.localStorage = originalLocalStorage;
-  });
 
-  QUnit.test('Dummy Test', function(assert) {
-    assert.ok(true, 'This test should always pass');
-  });
-}
-
-// Wait for app.js to be ready before running tests
-function checkAppReady() {
-  if (window.appReady) {
-    console.log("app.js is ready. Running tests.");
-    runTests();
-  } else {
-    console.log("Waiting for app.js to initialize...");
-    setTimeout(checkAppReady, 50); // Check again in 50ms
-  }
-}
-
-checkAppReady();
+// Restore original localStorage after tests are done
+QUnit.done(() => {
+  window.localStorage = originalLocalStorage;
+});

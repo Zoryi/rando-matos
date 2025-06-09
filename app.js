@@ -1,5 +1,4 @@
-document.addEventListener('DOMContentLoaded', () => {
-    // Get references to HTML elements (Add Item Section)
+// Get references to HTML elements (Add Item Section)
         const newItemNameInput = document.getElementById('item-name');
         const newItemWeightInput = document.getElementById('item-weight');
         const newItemBrandInput = document.getElementById('item-brand');
@@ -1598,41 +1597,3 @@ La catégorie doit être l'une des catégories existantes si possible : ${catego
 
         // Show the default section on load (Inventory)
         showSection('inventory-section');
-
-    // Expose functions for testing
-    window.saveData = saveData;
-    window.loadData = loadData;
-    window.addItem = addItem;
-    window.deleteItem = deleteItem;
-    window.addPack = addPack;
-    window.deletePack = deletePack;
-    window.addCategory = addCategory;
-    window.deleteCategory = deleteCategory;
-    window.togglePacked = togglePacked;
-    window.addItemToPack = addItemToPack;
-    window.removeItemFromPack = removeItemFromPack;
-    window.togglePackItemPackedOnDetailPage = togglePackItemPackedOnDetailPage;
-    window.unpackAllInCurrentPack = unpackAllInCurrentPack;
-    window.renderPacks = renderPacks;
-    window.renderItems = renderItems;
-    window.renderCategories = renderCategories;
-    window.renderCategoryManagement = renderCategoryManagement;
-    window.updateCategoryDropdowns = updateCategoryDropdowns;
-    window.renderPackDetail = renderPackDetail;
-    window.renderListByView = renderListByView;
-    window.updateViewFilterOptions = updateViewFilterOptions;
-    window.renderAll = renderAll; // Expose renderAll as well, tests.js can decide to use its mock or the real one.
-    window.showSection = showSection; // Might be useful for some UI tests
-    window.openEditModal = openEditModal;
-    window.saveEditedItem = saveEditedItem;
-    window.closeEditModal = closeEditModal;
-    window.callGeminiAPI = callGeminiAPI;
-    window.callImagenAPI = callImagenAPI;
-    window.updateImagePreview = updateImagePreview;
-    window.suggestItemDetails = suggestItemDetails;
-    window.generatePackList = generatePackList;
-    // Expose DOM elements if tests need to directly manipulate them outside of app.js functions (less ideal)
-    // window.newItemNameInput = newItemNameInput; // Example, but prefer testing via functions
-    window.appReady = true; // Signal that app.js has initialized
-    console.log('app.js DOMContentLoaded finished and appReady set');
-});
