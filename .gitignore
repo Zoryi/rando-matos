@@ -1,0 +1,13 @@
+# Ignore Node.js modules
+node_modules/
+
+# Ignore other common files/directories
+.DS_Store
+npm-debug.log
+*.log
+logs
+*.swp
+*.swo
+dist/
+build/
+coverage/

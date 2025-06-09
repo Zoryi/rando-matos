@@ -8,7 +8,108 @@
 </head>
 <body>
     <div id="qunit"></div>
-    <div id="qunit-fixture"></div>
+    <div id="qunit-fixture">
+        <!-- Main Content Wrapper (for querySelectorAll) -->
+        <div class="main-content">
+            <!-- Inventory Section -->
+            <div id="inventory-section" class="content-section active">
+                <select id="view-filter"></select>
+                <ul id="item-list"></ul>
+                <div id="total-weight"></div>
+            </div>
+
+            <!-- New Item Section -->
+            <div id="new-item-section" class="content-section">
+                <input type="text" id="item-name">
+                <input type="number" id="item-weight">
+                <input type="text" id="item-brand">
+                <select id="item-category"></select>
+                <input type="text" id="item-tags">
+                <input type="text" id="item-capacity">
+                <input type="url" id="item-image-url">
+                <input type="checkbox" id="item-consumable">
+                <img id="new-item-image-preview" style="display:none;">
+                <button id="add-item-button"></button>
+                <button id="suggest-new-item-details-button"></button>
+                <span id="new-item-loading-indicator"></span>
+            </div>
+
+            <!-- Manage Packs Section -->
+            <div id="manage-packs-section" class="content-section">
+                <input type="text" id="pack-name">
+                <button id="add-pack-button"></button>
+                <ul id="pack-list"></ul>
+            </div>
+
+            <!-- Pack Detail Section -->
+            <div id="pack-detail-section" class="content-section">
+                <h2 id="pack-detail-title"></h2>
+                <button id="unpack-all-button"></button>
+                <ul id="items-in-pack-list"></ul>
+                <ul id="available-items-list"></ul>
+            </div>
+
+            <!-- Manage Categories Section -->
+            <div id="manage-categories-section" class="content-section">
+                <input type="text" id="category-name">
+                <button id="add-category-button"></button>
+                <ul id="category-management-list"></ul>
+            </div>
+
+            <!-- Generate Pack Section -->
+            <div id="generate-pack-section" class="content-section">
+                <input type="text" id="gen-pack-destination">
+                <input type="number" id="gen-pack-duration">
+                <input type="text" id="gen-pack-activity">
+                <button id="generate-pack-list-button"></button>
+                <span id="generate-pack-loading-indicator"></span>
+                <div id="generated-pack-results">
+                    <ul id="generated-items-list"></ul>
+                </div>
+                <button id="add-selected-generated-items-button"></button>
+            </div>
+        </div>
+
+        <!-- Edit Item Modal -->
+        <div id="edit-item-modal" class="modal">
+            <input type="text" id="edit-item-name">
+            <input type="number" id="edit-item-weight">
+            <input type="text" id="edit-item-brand">
+            <select id="edit-item-category"></select>
+            <input type="text" id="edit-item-tags">
+            <input type="text" id="edit-item-capacity">
+            <input type="url" id="edit-item-image-url">
+            <input type="checkbox" id="edit-item-consumable">
+            <img id="edit-item-image-preview" style="display:none;">
+            <input type="hidden" id="editing-item-id">
+            <span id="close-edit-modal"></span>
+            <button id="save-item-button"></button>
+            <button id="suggest-edit-item-details-button"></button>
+            <span id="edit-item-loading-indicator"></span>
+        </div>
+
+        <!-- Pack Packing Modal -->
+        <div id="pack-packing-modal" class="modal">
+            <h3 id="packing-pack-name"></h3>
+            <ul id="pack-packing-list"></ul>
+            <button id="close-packing-modal"></button>
+        </div>
+
+        <!-- Sidebar structure (for querySelectorAll) -->
+        <div class="sidebar">
+            <span id="inventory-weight"></span> <!-- Moved here as it's part of sidebar display -->
+            <nav>
+                <ul>
+                    <li><a href="#inventory" data-section="inventory"></a></li>
+                    <li><a href="#new-item" data-section="new-item"></a></li>
+                    <li><a href="#manage-packs" data-section="manage-packs"></a></li>
+                    <li><a href="#manage-categories" data-section="manage-categories"></a></li>
+                    <li><a href="#generate-pack-section" data-section="generate-pack"></a></li> <!-- Corrected data-section to match ID part -->
+                </ul>
+            </nav>
+        </div>
+
+    </div>
 
     <script src="https://code.jquery.com/qunit/qunit-2.20.0.js"></script>
 
