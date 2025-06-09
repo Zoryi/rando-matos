@@ -1,4 +1,4 @@
-const CACHE_NAME = 'backpack-pwa-cache-v3';
+const CACHE_NAME = 'backpack-pwa-cache-v5';
 const URLS_TO_CACHE = [
   '/rando-matos/index.html',
   '/rando-matos/icons/icon-192x192.png',
