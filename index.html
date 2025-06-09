@@ -734,6 +734,25 @@
             .sidebar h2 {
                 display: none;
             }
+
+            .item-details img {
+                width: 2.5rem; /* 40px, was 3rem/48px from w-12 */
+                height: 2.5rem; /* 40px, was 3rem/48px from h-12 */
+                margin-right: 8px; /* Reduce margin slightly from 10px */
+            }
+
+            .item-name, .pack-name, .category-name {
+                font-size: 0.9rem; /* Slightly reduced from default */
+            }
+            .item-weight, .pack-weight, .category-weight {
+                font-size: 0.8rem; /* Slightly reduced from default 0.9rem */
+                color: #555; /* Ensure color is maintained if not inherited */
+            }
+
+            .item, .pack-item, .category-item {
+                padding: 10px; /* Reduced from 15px 10px */
+                /* min-height: 36px; Optional: consider if 40px is too much after other changes */
+            }
         }
 
         .image-preview {
