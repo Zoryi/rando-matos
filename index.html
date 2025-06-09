@@ -406,15 +406,16 @@
                  display: flex; /* Arrange menu items in a row */
                  flex-wrap: wrap; /* Allow wrapping */
                  justify-content: center; /* Center menu items */
-                 gap: 10px; /* Add space between menu items */
+                 gap: 5px; /* Was 10px */
              }
              .sidebar nav ul li {
                  margin-bottom: 0; /* Remove bottom margin */
              }
              .sidebar nav ul li a {
-                 padding: 8px 12px; /* Adjust padding */
+                 padding: 6px 8px; /* Adjust padding */
                  flex-direction: column; /* Stack icon and text */
                  text-align: center;
+                 font-size: 0.8rem; /* Added font-size, reduced padding */
              }
              .sidebar nav ul li a i {
                  margin-right: 0;
@@ -422,7 +423,8 @@
              }
              .menu-weight {
                  margin-left: 0; /* Remove auto margin */
-                 margin-top: 5px; /* Add space above weight */
+                 margin-top: 3px; /* Reduced margin-top */
+                 font-size: 0.7rem; /* Reduced font-size */
              }
              .main-content {
                  padding: 15px; /* Adjust padding */
@@ -701,6 +703,33 @@
              .pack-detail-grid {
                  grid-template-columns: 1fr; /* Stack columns on small screens */
              }
+
+            .item-details .item-brand,
+            .item-details .item-category,
+            .item-details .item-tags,
+            .item-details .item-capacity,
+            .item-details .item-consumable {
+                display: none;
+            }
+
+            .item-details { /* For mobile view specifically within @media */
+                min-width: 0; /* Allow shrinking below content size */
+                margin-right: 10px; /* Reduce margin slightly from 15px */
+            }
+
+            .item-actions { /* For mobile view specifically within @media */
+                flex-shrink: 0; /* Prevent this container from shrinking */
+                gap: 5px; /* Reduce gap from 10px */
+            }
+            .item-actions button { /* For mobile view specifically within @media */
+                padding: 4px 8px; /* Reduce padding from 5px 10px */
+                font-size: 0.8rem; /* Slightly smaller font for buttons */
+            }
+
+            .form-grid {
+                grid-template-columns: 1fr; /* Single column layout */
+                gap: 15px; /* Optionally reduce gap slightly for single column */
+            }
         }
 
         .image-preview {
