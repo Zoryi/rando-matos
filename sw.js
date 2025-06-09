@@ -1,10 +1,10 @@
-const CACHE_NAME = 'backpack-pwa-cache-v2';
+const CACHE_NAME = 'backpack-pwa-cache-v3';
 const URLS_TO_CACHE = [
-  '/index.html',
-  '/icons/icon-192x192.png',
-  '/icons/icon-512x512.png',
-  '/manifest.json',
-  '/app.js'
+  '/rando-matos/index.html',
+  '/rando-matos/icons/icon-192x192.png',
+  '/rando-matos/icons/icon-512x512.png',
+  '/rando-matos/manifest.json',
+  '/rando-matos/app.js'
 ];
 
 // Install event: Open cache and add core files
