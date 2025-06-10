@@ -58,6 +58,7 @@
         const itemsInPackList = document.getElementById('items-in-pack-list');
         const availableItemsList = document.getElementById('available-items-list');
         const unpackAllButton = document.getElementById('unpack-all-button'); // New button reference
+        const packDetailTitleHeading = document.getElementById('pack-detail-title-heading');
 
         // Get references to HTML elements (Sidebar and Layout)
         const sidebarLinks = document.querySelectorAll('.sidebar nav ul li a');
@@ -545,7 +546,7 @@
                  return;
              }
 
-             packDetailTitle.textContent = `Détails du Pack : ${pack.name}`;
+             packDetailTitleHeading.textContent = `Détails du Pack : ${pack.name}`;
              itemsInPackList.innerHTML = '';
              availableItemsList.innerHTML = '';
 
