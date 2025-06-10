@@ -115,13 +115,25 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function initApp() {
-        // Ensure services are loaded (they attach to window)
-        if (!window.persistenceService || !window.itemService || !window.packService || !window.categoryService || !window.apiService || !window.uiUtils) {
-            console.error("One or more core services (persistence, item, pack, category, api, uiUtils) not available. App cannot initialize.");
-            return;
+        console.log('initApp started. Checking critical dependencies...');
+        console.log('Checking window.persistenceService:', typeof window.persistenceService, window.persistenceService ? 'Exists' : 'MISSING!');
+        console.log('Checking window.itemService:', typeof window.itemService, window.itemService ? 'Exists' : 'MISSING!');
+        console.log('Checking window.packService:', typeof window.packService, window.packService ? 'Exists' : 'MISSING!');
+        console.log('Checking window.categoryService:', typeof window.categoryService, window.categoryService ? 'Exists' : 'MISSING!');
+        console.log('Checking window.apiService:', typeof window.apiService, window.apiService ? 'Exists' : 'MISSING!');
+        console.log('Checking window.uiUtils:', typeof window.uiUtils, window.uiUtils ? 'Exists' : 'MISSING!');
+        console.log('Checking window.appModels:', typeof window.appModels, window.appModels ? 'Exists' : 'MISSING!');
+        console.log('Checking window.appComponents:', typeof window.appComponents, window.appComponents ? 'Exists' : 'MISSING!');
+
+        // Existing check (can be kept or modified based on individual checks)
+        if (!window.persistenceService || !window.itemService || !window.packService || !window.categoryService || !window.apiService || !window.uiUtils || !window.appModels || !window.appComponents) {
+            console.error("One or more core services, models, utils, or component namespaces not available. App cannot initialize fully. Check script loading order and individual script errors. The logs above indicate which specific globals are problematic.");
+            // Optionally, you might want to prevent further execution if critical parts are missing.
+            // For now, the original code proceeds, so we'll allow it to proceed to see further errors if any.
+            // return; // Or throw new Error(...);
         }
 
-        const data = window.persistenceService.loadData();
+        const data = window.persistenceService.loadData(); // This line would fail if persistenceService is undefined
         window.itemService.setItems(data.items);
         window.packService.setPacks(data.packs);
         window.categoryService.setCategories(data.categories);
