@@ -1,10 +1,20 @@
 {
+  "name": "backpack-inventory-llm",
+  "version": "1.0.0",
+  "description": "A simple backpack inventory management app with LLM features.",
+  "main": "app.js",
   "scripts": {
-    "test:qunit": "node run-playwright-qunit.js",
-    "test": "mocha"
+    "test": "mocha",
+    "start": "node server.js"
   },
+  "keywords": [
+    "inventory",
+    "backpack",
+    "llm"
+  ],
+  "author": "",
+  "license": "ISC",
   "devDependencies": {
-    "chai": "^5.2.0",
     "jsdom": "^26.1.0",
     "mocha": "^11.6.0",
     "sinon": "^20.0.0"

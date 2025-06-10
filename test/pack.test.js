@@ -2,333 +2,220 @@ const assert = require('assert');
 const { JSDOM } = require('jsdom');
 const fs = require('fs');
 const path = require('path');
-const sinon = require('sinon'); // Using sinon for stubs
+const sinon = require('sinon');
 
-// Full HTML content (can be trimmed down later if tests are stable)
-let indexHtmlFullContent = `
-    <!DOCTYPE html><html><head><title>Test Page</title></head><body>
-      <section id="new-item-section">
-        <input id="item-name" /> <input id="item-weight" />
-        <input id="item-brand" /> <select id="item-category"><option value="">-- Select --</option></select>
-        <input id="item-tags" /> <input id="item-capacity" />
-        <input id="item-image-url" type="url" />
-        <input id="item-consumable" type="checkbox" />
-        <div id="new-item-image-preview"></div> <button id="add-item-button"></button>
-        <button id="suggest-new-item-details-button"></button>
-        <div id="new-item-loading-indicator" class="hidden"></div>
-      </section>
-      <section id="edit-item-section">
-         <input id="edit-item-name" /> <input id="edit-item-weight" />
-         <input id="edit-item-brand" /> <select id="edit-item-category"><option value="">-- Select --</option></select>
-         <input id="edit-item-tags" /> <input id="edit-item-capacity" />
-         <input id="edit-item-image-url" type="url" />
-         <input id="edit-item-consumable" type="checkbox" />
-         <div id="edit-item-image-preview" style="display:none;"></div>
-         <button id="save-item-button"></button> <input id="editing-item-id" type="hidden" />
-         <button id="close-edit-modal"></button>
-         <button id="suggest-edit-item-details-button"></button>
-         <div id="edit-item-loading-indicator" class="hidden"></div>
-      </section>
-      <ul id="item-list"></ul> <div id="total-weight"></div> <select id="view-filter"></select>
-      <input id="category-name" /> <button id="add-category-button"></button>
-      <input id="pack-name" /> <button id="add-pack-button"></button> {/* Added pack-name input */}
-      <div class="sidebar"><nav><ul>
-         <li><a href="#" data-section="inventory" id="mockSidebarLink1">Inventory</a></li>
-         <li><a href="#" data-section="new-item" id="mockSidebarLink2">New Item</a></li>
-      </ul></nav></div>
-      <div class="main-content">
-         <section id="inventory-section" class="content-section active"></section>
-         <section id="new-item-section" class="content-section"></section>
-         <section id="manage-packs-section" class="content-section"></section>
-         <section id="manage-categories-section" class="content-section"></section>
-         <section id="pack-detail-section" class="content-section"><h2 id="pack-detail-title"></h2><ul id="items-in-pack-list"></ul><ul id="available-items-list"></ul><button id="unpack-all-button"></button></section>
-         <section id="generate-pack-section" class="content-section"></section>
-      </div>
-      <ul id="pack-list"></ul> {/* Changed from div to ul to match app.js expectations */}
-      <div id="category-management-list"></div>
-      <div id="pack-packing-modal"><div id="packing-pack-name"></div><ul id="pack-packing-list"></ul><button id="close-packing-modal"></button></div>
-      <div id="inventory-weight"></div>
-      <input id="gen-pack-destination" /><input id="gen-pack-duration" /><input id="gen-pack-activity" />
-      <button id="generate-pack-list-button"></button><div id="generate-pack-loading-indicator"></div>
-      <div id="generated-pack-results"><ul id="generated-items-list"></ul><button id="add-selected-generated-items-button"></button></div>
-      <div id="edit-item-modal" style="display:none;"></div>
-      <button id="clear-all-button"></button> {/* Added clear all button */}
-    </body></html>`;
+describe('PackService Tests', function() {
+    let dom;
+    let window;
+    let mockConfirm, mockAlert;
+    let persistenceSaveDataSpy;
 
-let appJsContent = '';
-try {
-    appJsContent = fs.readFileSync(path.resolve(__dirname, '../app.js'), 'utf8');
-} catch (err) {
-    console.error('CRITICAL: Failed to read app.js. Tests cannot run.', err);
-    throw err;
-}
+    const appJsPath = path.resolve(__dirname, '../app.js');
+    const persistenceServiceJsPath = path.resolve(__dirname, '../services/persistenceService.js');
+    const itemServiceJsPath = path.resolve(__dirname, '../services/itemService.js');
+    const packServiceJsPath = path.resolve(__dirname, '../services/packService.js');
 
-let dom;
-let window;
-let app; // To hold the app's exported functions if module.exports is used, or global functions
+    let appJsContent, persistenceServiceJsContent, itemServiceJsContent, packServiceJsContent;
 
-// Stubs for global functions app.js might call
-let showAlertStub, confirmStub, renderPacksStub, updateViewFilterOptionsStub, saveDataStub, renderAllStub;
-let originalConsoleLog, originalConsoleError, originalConsoleWarn;
-let appJsLogs = []; // To capture logs from app.js
+    try {
+        appJsContent = fs.readFileSync(appJsPath, 'utf8');
+        persistenceServiceJsContent = fs.readFileSync(persistenceServiceJsPath, 'utf8');
+        itemServiceJsContent = fs.readFileSync(itemServiceJsPath, 'utf8');
+        packServiceJsContent = fs.readFileSync(packServiceJsPath, 'utf8');
+    } catch (err) {
+        console.error("Failed to read JS files for test setup:", err);
+        throw err;
+    }
 
-describe('Pack Management', function() {
-    beforeEach(function() {
-        dom = new JSDOM(indexHtmlFullContent, { url: "http://localhost", runScripts: "outside-only", resources: "usable" });
+    beforeEach(() => {
+        const html = '<!DOCTYPE html><html><head></head><body></body></html>';
+        dom = new JSDOM(html, { url: "http://localhost", runScripts: "outside-only" });
         window = dom.window;
+
         global.window = window;
         global.document = window.document;
+
+        const localStorageMock = (() => {
+            let store = {};
+            return {
+                getItem: key => store[key] || null,
+                setItem: (key, value) => { store[key] = value.toString(); },
+                clear: () => { store = {}; },
+                removeItem: key => { delete store[key]; }
+            };
+        })();
+        Object.defineProperty(window, 'localStorage', { value: localStorageMock, writable: true });
         global.localStorage = window.localStorage;
 
-        appJsLogs = []; // Reset logs
-        originalConsoleLog = console.log;
-        originalConsoleError = console.error;
-        originalConsoleWarn = console.warn;
+        // Eval order: app (for globals if any service relies on them), then services
+        window.eval(appJsContent);
+        window.eval(persistenceServiceJsContent);
+        window.eval(itemServiceJsContent); // itemService might be used to set up global.window.items
+        window.eval(packServiceJsContent);
 
-        // Evaluate app.js in the JSDOM context FIRST
-        try {
-            window.eval(appJsContent);
-        } catch (e) {
-            originalConsoleError("CRITICAL ERROR evaluating app.js in JSDOM (before stubs):", e, "\nCaptured logs so far:\n", appJsLogs.join('\n'));
-            // Restore console for mocha output
-            global.console.log = originalConsoleLog;
-            global.console.error = originalConsoleError;
-            global.console.warn = originalConsoleWarn;
-            this.currentTest.emit('error', e); // Make sure Mocha knows about this error
-            throw e; // Stop test execution here
-        }
-
-        // NOW, Capture console logs from app.js (or re-assign if eval changed them)
-        // and stub global functions AFTER app.js has defined them on 'window'.
-        global.console.log = (...args) => { appJsLogs.push("[LOG] " + args.join(' ')); originalConsoleLog(...args); };
-        global.console.error = (...args) => { appJsLogs.push("[ERROR] " + args.join(' ')); originalConsoleError(...args); };
-        global.console.warn = (...args) => { appJsLogs.push("[WARN] " + args.join(' ')); originalConsoleWarn(...args); };
-
-        // Stub global functions app.js relies on
-        // Ensure these functions exist on window object before stubbing
-        if (typeof window.alert !== 'function') window.alert = () => {};
-        if (typeof window.confirm !== 'function') window.confirm = () => true;
-        if (typeof window.renderPacks !== 'function') { originalConsoleError("Warning: window.renderPacks not found by test setup!"); window.renderPacks = () => {}; }
-        if (typeof window.updateViewFilterOptions !== 'function') { originalConsoleError("Warning: window.updateViewFilterOptions not found by test setup!"); window.updateViewFilterOptions = () => {}; }
-        if (typeof window.saveData !== 'function') { originalConsoleError("Warning: window.saveData not found by test setup!"); window.saveData = () => {}; }
-        if (typeof window.renderAll !== 'function') { originalConsoleError("Warning: window.renderAll not found by test setup!"); window.renderAll = () => {}; }
-
-        showAlertStub = sinon.stub(window, 'alert');
-        confirmStub = sinon.stub(window, 'confirm').returns(true); // Default to true
-        renderPacksStub = sinon.stub(window, 'renderPacks');
-        updateViewFilterOptionsStub = sinon.stub(window, 'updateViewFilterOptions');
-        saveDataStub = sinon.stub(window, 'saveData');
-        renderAllStub = sinon.stub(window, 'renderAll');
-
-        // Mock other functions that might be called
-        if (typeof window.renderPackDetail !== 'function') window.renderPackDetail = () => {};
-        if (typeof window.updateCategoryDropdowns !== 'function') window.updateCategoryDropdowns = () => {};
-        if (typeof window.showSection !== 'function') window.showSection = () => {};
-        if (typeof window.renderItems !== 'function') window.renderItems = () => {};
-        if (typeof window.renderCategories !== 'function') window.renderCategories = () => {};
-        if (typeof window.renderCategoryManagement !== 'function') window.renderCategoryManagement = () => {};
-        if (typeof window.renderPackPacking !== 'function') window.renderPackPacking = () => {};
-        if (typeof window.renderListByView !== 'function') window.renderListByView = () => {};
-        if (typeof window.updateImagePreview !== 'function') window.updateImagePreview = () => {};
-        if (typeof window.fetch !== 'function') window.fetch = () => {}; // Basic fetch mock if not defined - CORRECTED SYNTAX
-
-        sinon.stub(window, 'renderPackDetail');
-        sinon.stub(window, 'updateCategoryDropdowns');
-        sinon.stub(window, 'showSection');
-        sinon.stub(window, 'renderItems');
-        sinon.stub(window, 'renderCategories');
-        sinon.stub(window, 'renderCategoryManagement');
-        sinon.stub(window, 'renderPackPacking');
-        sinon.stub(window, 'renderListByView');
-        sinon.stub(window, 'updateImagePreview');
-        sinon.stub(window, 'fetch').resolves({ ok: true, json: async () => ({}) });
-
-        // Re-check app.js evaluation success for app object assignment
-        try {
-            // Direct usage of functions from window scope, and direct access to window.packs/items
-            app = { // Keep 'app' namespace for convenience in tests, but functions point to window
-                addPack: window.addPack,
-                deletePack: window.deletePack,
-                addItemToPack: window.addItemToPack,
-                removeItemFromPack: window.removeItemFromPack,
-                getPacks: () => window.packs, // Directly access window.packs
-                setPacks: (newPacks) => { window.packs = newPacks; }, // Directly set window.packs
-                getItems: () => window.items, // Directly access window.items
-                setItems: (newItems) => { window.items = newItems; }  // Directly set window.items
-            };
-
-            // Ensure global arrays are initialized on window *before* loadData might use them
-            // (app.js itself also initializes them, this is belt-and-suspenders)
-            window.packs = window.packs || [];
-            window.items = window.items || [];
-            window.categories = window.categories || [];
-
-            // Initialize/Reset global arrays for the test context
-            // app.js's loadData will use these if called.
-            // Tests will also use these via app.get/setPacks/Items.
-            window.packs = [];
-            window.items = [];
-            window.categories = [];
-
-            // Call loadData if it exists. It will use the stubs already in place.
-            // The stubs are created once before this and are on `window`.
-            if (typeof window.loadData === 'function') {
-                window.loadData(); // This will call the app's loadData, which might call stubbed functions.
-            }
-
-        } catch (e) {
-            originalConsoleError("ERROR during app object assignment or loadData in JSDOM for Pack tests:", e, "\nCaptured logs so far:\n", appJsLogs.join('\n'));
-            // Restore console for mocha output
-            global.console.log = originalConsoleLog;
-            global.console.error = originalConsoleError;
-            global.console.warn = originalConsoleWarn;
-            this.currentTest.emit('error', e);
-            throw e;
-        }
-
-        // Ensure packs and items are reset for each test *again* here to ensure clean state if loadData didn't run or if it's complex
-        // This makes app.setPacks([]) the definitive state for these arrays before each test.
-        if(app && typeof app.setPacks === 'function') app.setPacks([]);
-        if(app && typeof app.setItems === 'function') app.setItems([]);
-        // No app.setCategories, so directly:
+        // Initialize global data arrays expected by services
+        window.items = []; // packService directly modifies window.items
+        window.packs = []; // packService's internal state is mirrored here for some old logic
         window.categories = [];
 
+        if (window.itemService && typeof window.itemService.setItems === 'function') {
+            window.itemService.setItems([]); // Clear items in itemService as well
+        } else {
+            console.warn("itemService or itemService.setItems not found during setup.");
+        }
+        if (window.packService && typeof window.packService.setPacks === 'function') {
+            window.packService.setPacks([]);
+        } else {
+            throw new Error("packService or packService.setPacks is not defined on window after eval.");
+        }
 
-        // Reset history for all stubs AFTER loadData and BEFORE each test logic runs
-        showAlertStub.resetHistory();
-        confirmStub.resetHistory(); // Added confirmStub to reset
-        renderPacksStub.resetHistory();
-        updateViewFilterOptionsStub.resetHistory();
-        saveDataStub.resetHistory();
-        renderAllStub.resetHistory();
-
-        // Reset history for other stubs created with sinon.stub(window, '...')
-        if(window.renderPackDetail.isSinonProxy) window.renderPackDetail.resetHistory();
-        if(window.updateCategoryDropdowns.isSinonProxy) window.updateCategoryDropdowns.resetHistory();
-        if(window.showSection.isSinonProxy) window.showSection.resetHistory();
-        if(window.renderItems.isSinonProxy) window.renderItems.resetHistory();
-        if(window.renderCategories.isSinonProxy) window.renderCategories.resetHistory();
-        if(window.renderCategoryManagement.isSinonProxy) window.renderCategoryManagement.resetHistory();
-        if(window.renderPackPacking.isSinonProxy) window.renderPackPacking.resetHistory();
-        if(window.renderListByView.isSinonProxy) window.renderListByView.resetHistory();
-        if(window.updateImagePreview.isSinonProxy) window.updateImagePreview.resetHistory();
-        if(window.fetch.isSinonProxy) window.fetch.resetHistory();
-
-
+        persistenceSaveDataSpy = sinon.spy(window.persistenceService, 'saveData');
+        mockConfirm = sinon.stub(window, 'confirm');
+        mockAlert = sinon.stub(window, 'alert');
     });
 
-    afterEach(function() {
-        sinon.restore(); // Restores all stubs and spies
-        global.console.log = originalConsoleLog;
-        global.console.error = originalConsoleError;
-        global.console.warn = originalConsoleWarn;
+    afterEach(() => {
+        sinon.restore();
+        if (window && window.close) {
+            window.close();
+        }
     });
 
-    it('should add a new pack with a valid name', function() {
-        const packNameInput = global.document.getElementById('pack-name');
-        assert.ok(packNameInput, "Pack name input field should exist in DOM");
+    describe('addPack', function() {
+        it('should add a valid pack and call saveData', function() {
+            const packName = 'Test Pack';
+            const newPack = window.packService.addPack(packName);
+            assert.ok(newPack, 'addPack should return the new pack');
+            assert.strictEqual(newPack.name, packName);
+            assert.ok(newPack.id, 'New pack should have an ID');
 
-        const testPackName = "Valid Test Pack";
-        packNameInput.value = testPackName;
-        originalConsoleLog(`[TEST] Set pack-name input value to: "${packNameInput.value}"`);
+            const packs = window.packService.getPacks();
+            assert.strictEqual(packs.length, 1);
+            assert.deepStrictEqual(packs[0], newPack);
 
-        app.addPack();
+            assert.ok(persistenceSaveDataSpy.calledOnce, 'saveData should be called');
+            assert.deepStrictEqual(persistenceSaveDataSpy.firstCall.args[1], packs, "saveData not called with correct packs array");
+        });
 
-        const currentPacks = app.getPacks();
-        originalConsoleLog(`[TEST] Packs after addPack: ${JSON.stringify(currentPacks)}`);
-        originalConsoleLog(`[TEST] Captured app.js logs:\n${appJsLogs.join('\n')}`);
-
-        const packAdded = currentPacks.some(p => p.name === testPackName);
-        assert.ok(packAdded, `Pack "${testPackName}" should be added. Logs:\n${appJsLogs.join('\n')}`);
-
-        assert.ok(renderPacksStub.calledOnce, "renderPacks should have been called once");
-        assert.ok(updateViewFilterOptionsStub.calledOnce, "updateViewFilterOptions should have been called once");
-        assert.ok(saveDataStub.calledOnce, "saveData should have been called once");
-        // The original app.js calls alert for success, let's ensure it's NOT called for error
-        // and if it IS called, it's for success (though current app.js doesn't alert on success for addPack)
-        // Checking the diagnostic log from app.js for "packNameInput_local.value" can be helpful.
-        const addPackLog = appJsLogs.find(log => log.includes("[APP.JS ADD_PACK] packNameInput_local.value"));
-        assert.ok(addPackLog, "Diagnostic log from addPack was not found.");
-        assert.ok(addPackLog.includes(testPackName), "addPack diagnostic log should contain the test pack name.");
+        it('should not add a pack with an empty name and call alert', function() {
+            const result = window.packService.addPack('');
+            assert.strictEqual(result, null);
+            assert.ok(mockAlert.calledOnceWith('Veuillez entrer le nom du pack.'), 'Alert not called for empty name');
+            assert.ok(persistenceSaveDataSpy.notCalled, 'saveData should not be called');
+        });
     });
 
-    it('should not add a pack if name is empty', function() {
-        const packNameInput = global.document.getElementById('pack-name');
-        assert.ok(packNameInput, "Pack name input field should exist for empty test");
-        packNameInput.value = ""; // Set input to empty
+    describe('deletePack', function() {
+        let pack1, item1, item2;
+        beforeEach(function() {
+            pack1 = window.packService.addPack('Pack to Delete');
+            // Setup global window.items for packService to interact with
+            window.items = [
+                { id: 'item1', name: 'Item 1 in pack', packIds: [pack1.id], packed: false },
+                { id: 'item2', name: 'Item 2 not in pack', packIds: ['otherpack'], packed: false },
+                { id: 'item3', name: 'Item 3 also in pack', packIds: [pack1.id, 'anotherpack'], packed: false }
+            ];
+            // Also set items in itemService if other parts of app rely on it (not directly tested here but good for consistency)
+            if (window.itemService) window.itemService.setItems(window.items);
+            persistenceSaveDataSpy.resetHistory();
+        });
 
-        const initialPacksCount = app.getPacks().length;
-        app.addPack();
+        it('should delete a pack and update items if confirmed', function() {
+            mockConfirm.returns(true);
+            const result = window.packService.deletePack(pack1.id, window.confirm);
+            assert.strictEqual(result, true, 'deletePack should return true');
 
-        assert.strictEqual(app.getPacks().length, initialPacksCount, "Pack count should remain the same");
-        assert.ok(showAlertStub.calledOnceWith('Veuillez entrer le nom du pack.'), "Alert for empty pack name not shown or message incorrect");
-        assert.ok(renderPacksStub.notCalled, "renderPacks should not be called on validation failure");
-        assert.ok(saveDataStub.notCalled, "saveData should not be called on validation failure");
+            const packs = window.packService.getPacks();
+            assert.strictEqual(packs.length, 0, 'Pack should be removed from service');
+
+            assert.deepStrictEqual(window.items.find(i => i.id === 'item1').packIds, [], 'packId not removed from item1');
+            assert.deepStrictEqual(window.items.find(i => i.id === 'item2').packIds, ['otherpack'], 'item2 should be unchanged');
+            assert.deepStrictEqual(window.items.find(i => i.id === 'item3').packIds, ['anotherpack'], 'packId not removed correctly from item3');
+
+            assert.ok(persistenceSaveDataSpy.calledOnce, 'saveData should be called');
+        });
+
+        it('should not delete if not confirmed', function() {
+            mockConfirm.returns(false);
+            const result = window.packService.deletePack(pack1.id, window.confirm);
+            assert.strictEqual(result, false);
+            assert.strictEqual(window.packService.getPacks().length, 1);
+            assert.ok(persistenceSaveDataSpy.notCalled);
+        });
     });
 
-    it('should not add a pack if name contains only whitespace', function() {
-        const packNameInput = global.document.getElementById('pack-name');
-        assert.ok(packNameInput, "Pack name input field should exist for whitespace test");
-        packNameInput.value = "   "; // Set input to whitespace
+    describe('addItemToPack', function() {
+        let item1, pack1;
+        beforeEach(function() {
+            pack1 = window.packService.addPack('Test Pack');
+            window.items = [{ id: 'item1', name: 'Test Item', packIds: [], packed: false }];
+            if (window.itemService) window.itemService.setItems(window.items);
+            persistenceSaveDataSpy.resetHistory();
+        });
 
-        const initialPacksCount = app.getPacks().length;
-        app.addPack();
+        it('should add item to pack and call saveData', function() {
+            const result = window.packService.addItemToPack('item1', pack1.id);
+            assert.strictEqual(result, true, "addItemToPack should return true");
+            assert.ok(Array.isArray(window.items[0].packIds), "packIds should be an array");
+            assert.strictEqual(window.items[0].packIds.length, 1, "packIds should contain one ID");
+            assert.strictEqual(window.items[0].packIds[0], pack1.id, "packIds should contain the correct pack ID");
+            assert.ok(persistenceSaveDataSpy.calledOnce);
+        });
 
-        assert.strictEqual(app.getPacks().length, initialPacksCount, "Pack count should remain the same for whitespace name");
-        assert.ok(showAlertStub.calledOnceWith('Veuillez entrer le nom du pack.'), "Alert for whitespace pack name not shown or message incorrect");
-        assert.ok(renderPacksStub.notCalled, "renderPacks should not be called on validation failure for whitespace");
-        assert.ok(saveDataStub.notCalled, "saveData should not be called on validation failure for whitespace");
+        it('should not add item if already in pack', function() {
+            window.packService.addItemToPack('item1', pack1.id); // Add once
+            persistenceSaveDataSpy.resetHistory();
+            const result = window.packService.addItemToPack('item1', pack1.id); // Try adding again
+            assert.strictEqual(result, false);
+            assert.ok(persistenceSaveDataSpy.notCalled);
+        });
     });
 
-    it('should delete a pack and remove it from items', function() {
-        const packIdToDelete = 'pack123';
-        app.setPacks([{id: packIdToDelete, name: 'ToDelete'}]);
-        app.setItems([
-            { id: 'item1', name: 'Item In Pack', packIds: [packIdToDelete, 'otherPack'] },
-            { id: 'item2', name: 'Item Not In Pack', packIds: ['otherPack'] }
-        ]);
+    describe('removeItemFromPack', function() {
+        let item1, pack1;
+        beforeEach(function() {
+            pack1 = window.packService.addPack('Test Pack');
+            window.items = [{ id: 'item1', name: 'Test Item', packIds: [pack1.id], packed: true }];
+            if (window.itemService) window.itemService.setItems(window.items);
+            persistenceSaveDataSpy.resetHistory();
+        });
 
-        confirmStub.returns(true); // Ensure confirm returns true for this test
-
-        app.deletePack(packIdToDelete);
-
-        assert.strictEqual(app.getPacks().length, 0, 'Pack should be removed');
-        assert.ok(confirmStub.calledOnce, 'confirm should be called'); // Assumes one confirmation
-        assert.ok(renderAllStub.calledOnce, 'renderAll should be called');
-        assert.ok(saveDataStub.calledOnce, 'saveData should be called');
-
-        const currentItems = app.getItems();
-        assert.deepStrictEqual(currentItems[0].packIds, ['otherPack'], 'Pack ID should be removed from item1');
-        assert.deepStrictEqual(currentItems[1].packIds, ['otherPack'], 'item2 packIds should be unchanged');
+        it('should remove item from pack, unpack it, and call saveData', function() {
+            const result = window.packService.removeItemFromPack('item1', pack1.id);
+            assert.strictEqual(result, true);
+            assert.deepStrictEqual(window.items[0].packIds, []);
+            assert.strictEqual(window.items[0].packed, false, "Item should be unpacked");
+            assert.ok(persistenceSaveDataSpy.calledOnce);
+        });
     });
 
-    it('should add an item to a pack', function() {
-        const packId = 'p1'; const itemId = 'i1';
-        app.setPacks([{id: packId, name: 'My Pack'}]);
-        app.setItems([{id: itemId, name: 'My Item', packIds: []}]);
+    describe('unpackAllInCurrentPack', function() {
+        let pack1;
+        beforeEach(function() {
+            pack1 = window.packService.addPack('Test Pack');
+            window.items = [
+                { id: 'item1', name: 'Item 1', packIds: [pack1.id], packed: true },
+                { id: 'item2', name: 'Item 2', packIds: [pack1.id], packed: false },
+                { id: 'item3', name: 'Item 3', packIds: ['otherpack'], packed: true },
+            ];
+            if (window.itemService) window.itemService.setItems(window.items);
+            persistenceSaveDataSpy.resetHistory();
+        });
 
-        app.addItemToPack(itemId, packId);
+        it('should unpack all packed items in the specified pack and call saveData', function() {
+            const result = window.packService.unpackAllInCurrentPack(pack1.id);
+            assert.strictEqual(result, true, "Should return true as an item was unpacked");
+            assert.strictEqual(window.items.find(i=>i.id==='item1').packed, false);
+            assert.strictEqual(window.items.find(i=>i.id==='item2').packed, false); // Was already false
+            assert.strictEqual(window.items.find(i=>i.id==='item3').packed, true); // Should be unchanged
+            assert.ok(persistenceSaveDataSpy.calledOnce);
+        });
 
-        const currentItems = app.getItems();
-        assert.ok(currentItems[0].packIds.includes(packId), 'Item should have packId');
-        // renderPackDetail is stubbed on window, so check window.renderPackDetail
-        assert.ok(window.renderPackDetail.calledOnceWith(packId), 'renderPackDetail should be called with packId');
-        assert.ok(renderAllStub.calledOnce, 'renderAll should be called'); // addItemToPack calls renderAll
-        assert.ok(saveDataStub.calledOnce, 'saveData should be called');
-    });
-
-    it('should remove an item from a pack and unpack it', function() {
-        const packId = 'p1'; const itemId = 'i1';
-        app.setPacks([{id: packId, name: 'My Pack'}]);
-        app.setItems([{id: itemId, name: 'My Item', packIds: [packId], packed: true}]);
-
-        app.removeItemFromPack(itemId, packId);
-
-        const currentItems = app.getItems();
-        assert.strictEqual(currentItems[0].packIds.includes(packId), false, 'Item should not have packId');
-        assert.strictEqual(currentItems[0].packed, false, 'Item should be unpacked');
-        assert.ok(window.renderPackDetail.calledOnceWith(packId), 'renderPackDetail should be called with packId');
-        assert.ok(renderAllStub.calledOnce, 'renderAll should be called'); // removeItemFromPack calls renderAll
-        assert.ok(saveDataStub.calledOnce, 'saveData should be called');
+        it('should do nothing and not call saveData if no items are packed in the pack', function() {
+            window.items.find(i=>i.id==='item1').packed = false; // Ensure all relevant items are unpacked
+            const result = window.packService.unpackAllInCurrentPack(pack1.id);
+            assert.strictEqual(result, false, "Should return false as no items were changed");
+            assert.ok(persistenceSaveDataSpy.notCalled);
+        });
     });
 });

@@ -14,7 +14,7 @@
 
 
         // Get references to HTML elements (Manage Packs Section)
-        // const packNameInput = document.getElementById('pack-name'); // Refactored: Get this inside addPack and its listeners
+        const packNameInput = document.getElementById('pack-name');
         const addPackButton = document.getElementById('add-pack-button');
         const packListElement = document.getElementById('pack-list');
 
@@ -55,7 +55,7 @@
 
         // Get references to HTML elements (Pack Detail Section)
         const packDetailSection = document.getElementById('pack-detail-section');
-        const packDetailTitle = document.getElementById('pack-detail-title'); // Added this line, was missing
+        const packDetailTitle = document.getElementById('pack-detail-title'); // Added this line, assuming it exists in index.html
         const itemsInPackList = document.getElementById('items-in-pack-list');
         const availableItemsList = document.getElementById('available-items-list');
         const unpackAllButton = document.getElementById('unpack-all-button'); // New button reference
@@ -78,94 +78,32 @@
 
         // Arrays to store items, packs, and explicitly created categories
         window.items = [];
-        window.packs = [];
-        window.categories = [];
-        let currentView = 'all';
-        let currentManagingPackId = null;
+        window.packs = []; // [{ id: 'pack-id-1', name: 'Nom du Pack' }]
+        window.categories = []; // New array for explicitly created categories [{ name: 'Nom Catégorie' }]
+        window.currentView = 'all'; // 'all', 'categories', 'pack-{packId}'
+        window.currentManagingPackId = null; // Store the ID of the pack being managed
 
-        // Function to save data to local storage
-        function saveData() {
-            localStorage.setItem('backpackItems', JSON.stringify(window.items));
-            localStorage.setItem('backpackPacks', JSON.stringify(window.packs));
-            localStorage.setItem('backpackCategories', JSON.stringify(window.categories));
-        }
+        // saveData function is now in persistenceService.js
+        // loadData function is now in persistenceService.js
 
-        // Function to load data from local storage
-        function loadData() {
-            const storedItems = localStorage.getItem('backpackItems');
-            const storedPacks = localStorage.getItem('backpackPacks');
-            const storedCategories = localStorage.getItem('backpackCategories');
-
-            if (storedItems && JSON.parse(storedItems).length > 0) {
-                window.items = JSON.parse(storedItems);
-                 window.items.forEach(item => {
-                     if (!item.packIds) {
-                         item.packIds = item.packId ? [item.packId] : [];
-                         delete item.packId;
-                     }
-                 });
-            } else {
-                window.items = [
-                    { id: 'item-1', name: 'Tente 2P MSR Hubba Hubba', weight: 1300, brand: 'MSR', category: 'Camping', tags: ['bivouac', 'léger'], capacity: '2 personnes', imageUrl: 'https://placehold.co/50x50/aabbcc/ffffff?text=Tente', isConsumable: false, packIds: [], packed: false },
-                    { id: 'item-2', name: 'Sac de couchage -5°C', weight: 900, brand: 'Decathlon', category: 'Camping', tags: ['chaud'], capacity: 'N/A', imageUrl: 'https://placehold.co/50x50/ccbbaa/ffffff?text=Couchage', isConsumable: false, packIds: [], packed: false },
-                    { id: 'item-3', name: 'Réchaud à gaz MSR PocketRocket', weight: 73, brand: 'MSR', category: 'Cuisine', tags: ['léger', 'gaz'], capacity: 'N/A', imageUrl: 'https://placehold.co/50x50/aaccee/ffffff?text=Réchaud', isConsumable: false, packIds: [], packed: false },
-                    { id: 'item-4', name: 'Popote Titane 750ml', weight: 130, brand: 'Evernew', category: 'Cuisine', tags: ['ultralight'], capacity: '750ml', imageUrl: 'https://placehold.co/50x50/eeddcc/ffffff?text=Popote', isConsumable: false, packIds: [], packed: false },
-                    { id: 'item-5', name: 'Veste Pluie Gore-Tex', weight: 350, brand: 'Arc\'teryx', category: 'Vêtements', tags: ['imperméable'], capacity: 'N/A', imageUrl: 'https://placehold.co/50x50/ffccaa/ffffff?text=Veste', isConsumable: false, packIds: [], packed: false },
-                    { id: 'item-6', name: 'Frontale Petzl Bindi', weight: 35, brand: 'Petzl', category: 'Électronique', tags: ['lumière', 'usb'], capacity: 'N/A', imageUrl: 'https://placehold.co/50x50/ddeeff/ffffff?text=Frontale', isConsumable: false, packIds: [], packed: false },
-                    { id: 'item-7', name: 'Crème solaire SPF50', weight: 80, brand: 'La Roche-Posay', category: 'Hygiène', tags: ['protection', 'soleil'], capacity: '50ml', imageUrl: 'https://placehold.co/50x50/ffeebb/ffffff?text=Solaire', isConsumable: true, packIds: [], packed: false },
-                    { id: 'item-8', name: 'Kit Premiers Secours', weight: 150, brand: 'Adventure Medical Kits', category: 'Sécurité', tags: ['urgence', 'médical'], capacity: 'N/A', imageUrl: 'https://placehold.co/50x50/cceeff/ffffff?text=Trousse', isConsumable: false, packIds: [], packed: false },
-                    { id: 'item-9', name: 'Barres énergétiques', weight: 200, brand: 'Isostar', category: 'Nourriture', tags: ['snack', 'énergie'], capacity: '4 barres', imageUrl: 'https://placehold.co/50x50/ccffdd/ffffff?text=Barres', isConsumable: true, packIds: [], packed: false },
-                    { id: 'item-10', name: 'Boussole', weight: 50, brand: 'Silva', category: 'Navigation', tags: ['orientation'], capacity: 'N/A', imageUrl: 'https://placehold.co/50x50/ffddcc/ffffff?text=Boussole', isConsumable: false, packIds: [], packed: false }
-                ];
-            }
-
-            if (storedPacks && JSON.parse(storedPacks).length > 0) {
-                window.packs = JSON.parse(storedPacks);
-            } else {
-                window.packs = [
-                    { id: 'pack-trek-ete', name: 'Pack Trek Été' },
-                    { id: 'pack-weekend-ski', name: 'Pack Week-end Ski' },
-                    { id: 'pack-camping-base', name: 'Pack Camping Base' }
-                ];
-
-                if(window.items.find(item => item.id === 'item-1')) window.items.find(item => item.id === 'item-1').packIds.push('pack-trek-ete', 'pack-camping-base');
-                if(window.items.find(item => item.id === 'item-2')) window.items.find(item => item.id === 'item-2').packIds.push('pack-trek-ete');
-                if(window.items.find(item => item.id === 'item-3')) window.items.find(item => item.id === 'item-3').packIds.push('pack-trek-ete', 'pack-camping-base');
-                if(window.items.find(item => item.id === 'item-4')) window.items.find(item => item.id === 'item-4').packIds.push('pack-trek-ete');
-                if(window.items.find(item => item.id === 'item-5')) window.items.find(item => item.id === 'item-5').packIds.push('pack-trek-ete', 'pack-weekend-ski');
-                if(window.items.find(item => item.id === 'item-6')) window.items.find(item => item.id === 'item-6').packIds.push('pack-trek-ete', 'pack-camping-base', 'pack-weekend-ski');
-                if(window.items.find(item => item.id === 'item-9')) window.items.find(item => item.id === 'item-9').packIds.push('pack-trek-ete');
-
-                if(window.items.find(item => item.id === 'item-1')) window.items.find(item => item.id === 'item-1').packed = true;
-                if(window.items.find(item => item.id === 'item-3')) window.items.find(item => item.id === 'item-3').packed = true;
-                if(window.items.find(item => item.id === 'item-6')) window.items.find(item => item.id === 'item-6').packed = true;
-            }
-
-            if (storedCategories && JSON.parse(storedCategories).length > 0) {
-                 window.categories = JSON.parse(storedCategories);
-            } else {
-                 window.categories = [
-                     { name: 'Camping' }, { name: 'Cuisine' }, { name: 'Vêtements' },
-                     { name: 'Électronique' }, { name: 'Hygiène' }, { name: 'Sécurité' },
-                     { name: 'Nourriture' }, { name: 'Navigation' }
-                 ];
-            }
-             renderAll();
-        }
-
-        function renderPacks() {
+        // Function to render the pack list and update the pack select dropdowns
+        window.renderPacks = function renderPacks() {
+            if (!packListElement) return; // Guard against missing element
             packListElement.innerHTML = '';
+
             if (window.packs.length === 0) {
                 packListElement.innerHTML = '<li class="text-center text-gray-500">Aucun pack créé.</li>';
             } else {
                  window.packs.forEach(pack => {
+                    // Calculate weight for items whose packIds array includes this pack's ID
                     const packItems = window.items.filter(item => item.packIds && item.packIds.includes(pack.id));
                     const packWeight = packItems.reduce((sum, item) => sum + (parseFloat(item.weight) || 0), 0);
-                    const packedWeight = packItems.filter(item => item.packed).reduce((sum, item) => sum + (parseFloat(item.weight) || 0), 0);
-                    const packProgress = packWeight > 0 ? (packedWeight / packWeight) * 100 : 0;
+                    const packedWeight = packItems.filter(item => item.packed).reduce((sum, item) => sum + (parseFloat(item.weight) || 0), 0); // Calculate packed weight
+                    const packProgress = packWeight > 0 ? (packedWeight / packWeight) * 100 : 0; // Progress based on weight
 
                     const listItem = document.createElement('li');
                     listItem.classList.add('pack-item');
+                     // Add 'packed' class if all items in pack are packed (based on weight)
                      if (packWeight > 0 && packedWeight === packWeight) {
                          listItem.classList.add('packed');
                      }
@@ -181,27 +119,37 @@
                         </div>
                     `;
                     packListElement.appendChild(listItem);
+
+                    // Pack select dropdowns are now handled differently on the pack detail page
                 });
             }
-             updateViewFilterOptions();
+
+             // Add pack view options to the filter select
+             if (typeof window.updateViewFilterOptions === 'function') window.updateViewFilterOptions();
         }
 
-        function renderItems(filteredItemsToRender = window.items) { // Renamed parameter to avoid conflict
-            itemListElement.innerHTML = '';
+        // Function to render the item list based on the current view
+        window.renderItems = function renderItems(filteredItems = window.items) {
+            if (!itemListElement || !totalWeightElement || !inventoryWeightElement) return; // Guard
+            itemListElement.innerHTML = ''; // Clear current list
             let totalWeight = 0;
 
-            if (filteredItemsToRender.length === 0) {
+            if (filteredItems.length === 0) {
                 itemListElement.innerHTML = '<li class="text-center text-gray-500">Aucun item à afficher.</li>';
             } else {
-                 filteredItemsToRender.forEach((item, index) => {
+                 filteredItems.forEach((item, index) => {
                     const listItem = document.createElement('li');
                     listItem.classList.add('item');
                     if (item.packed) {
                         listItem.classList.add('packed');
                     }
+
+                    // Calculate item weight percentage for the bar graph (relative to total weight)
                     const itemWeight = parseFloat(item.weight) || 0;
-                    const totalInventoryWeightForBar = window.items.reduce((sum, i) => sum + (parseFloat(i.weight) || 0), 0); // Use window.items for total
-                    const weightPercentage = totalInventoryWeightForBar > 0 ? (itemWeight / totalInventoryWeightForBar) * 100 : 0;
+                    const total = window.items.reduce((sum, i) => sum + (parseFloat(i.weight) || 0), 0);
+                    // For individual items, the bar represents their weight relative to the total inventory weight
+                    const weightPercentage = total > 0 ? (itemWeight / total) * 100 : 0;
+
 
                     listItem.innerHTML = `
                         <div class="weight-bar" style="width: ${weightPercentage}%;"></div>
@@ -222,17 +170,32 @@
                              <button class="edit-button" data-item-id="${item.id}">Modifier</button>
                             </div>
                     `;
+                    // Removed pack/unpack button from inventory view
+
+
                     itemListElement.appendChild(listItem);
+
+                    // Add weight to total if it's a valid number
                     totalWeight += itemWeight;
                 });
             }
+
+
+            // Update total weight display
             totalWeightElement.textContent = `Poids Total : ${totalWeight} g`;
+            // Update inventory weight in sidebar
             inventoryWeightElement.textContent = `(${totalWeight} g)`;
-            saveData();
+
+
+            // Save data
+            if (window.persistenceService && typeof window.persistenceService.saveData === 'function') { window.persistenceService.saveData(window.items, window.packs, window.categories); } else { console.warn('persistenceService.saveData not found'); };
         }
 
-        function renderCategories() {
-             itemListElement.innerHTML = '';
+        // Function to render items grouped by category (used in Inventory view filter)
+        window.renderCategories = function renderCategories() {
+             if (!itemListElement || !totalWeightElement || !inventoryWeightElement) return; // Guard
+             itemListElement.innerHTML = ''; // Clear current list
+             // Get unique categories with items, including items with no category
              const categoriesWithItems = [...new Set(window.items.map(item => item.category || 'Sans catégorie'))];
 
              if (categoriesWithItems.length === 0) {
@@ -241,11 +204,13 @@
                  categoriesWithItems.forEach(category => {
                     const itemsInCategory = window.items.filter(item => (item.category || 'Sans catégorie') === category);
                     const categoryWeight = itemsInCategory.reduce((sum, item) => sum + (parseFloat(item.weight) || 0), 0);
-                    const packedWeightInCategory = itemsInCategory.filter(item => item.packed).reduce((sum, item) => sum + (parseFloat(item.weight) || 0), 0);
-                     const categoryProgress = categoryWeight > 0 ? (packedWeightInCategory / categoryWeight) * 100 : 0;
+                    const packedWeightInCategory = itemsInCategory.filter(item => item.packed).reduce((sum, item) => sum + (parseFloat(item.weight) || 0), 0); // Calculate packed weight in category
+                     const categoryProgress = categoryWeight > 0 ? (packedWeightInCategory / categoryWeight) * 100 : 0; // Progress based on weight
+
 
                     const categoryHeader = document.createElement('li');
                     categoryHeader.classList.add('category-item', 'font-bold', 'mt-4');
+                     // Add 'packed' class if all items in category are packed (based on weight)
                      if (categoryWeight > 0 && packedWeightInCategory === categoryWeight) {
                          categoryHeader.classList.add('packed');
                      }
@@ -256,18 +221,23 @@
                             <span class="category-weight">(${categoryWeight} g)</span>
                             <span class="ml-2 text-sm text-gray-600">${packedWeightInCategory} g / ${categoryWeight} g emballés</span>
                          </div>
-                         <div class="category-actions"></div>
+                         <div class="category-actions">
+                             </div>
                      `;
                     itemListElement.appendChild(categoryHeader);
 
+                    // Render items within this category
                     itemsInCategory.forEach(item => {
                          const listItem = document.createElement('li');
-                         listItem.classList.add('item', 'ml-4');
+                         listItem.classList.add('item', 'ml-4'); // Indent items
                          if (item.packed) {
                              listItem.classList.add('packed');
                          }
+
+                        // For items within a category view, the bar represents their weight relative to the category weight
                         const itemWeight = parseFloat(item.weight) || 0;
                         const weightPercentage = categoryWeight > 0 ? (itemWeight / categoryWeight) * 100 : 0;
+
                          listItem.innerHTML = `
                              <div class="weight-bar" style="width: ${weightPercentage}%;"></div>
                              <div class="item-details">
@@ -287,27 +257,38 @@
                                   <button class="edit-button" data-item-id="${item.id}">Modifier</button>
                                  </div>
                          `;
+                         // Removed pack/unpack button from category view
                          itemListElement.appendChild(listItem);
                     });
                  });
              }
-             const totalWeightVal = window.items.reduce((sum, item) => sum + (parseFloat(item.weight) || 0), 0); // Use window.items
-             totalWeightElement.textContent = `Poids Total : ${totalWeightVal} g`;
-             inventoryWeightElement.textContent = `(${totalWeightVal} g)`;
-             saveData();
+
+             // Update total weight display (still show total backpack weight)
+             const totalWeight = window.items.reduce((sum, item) => sum + (parseFloat(item.weight) || 0), 0);
+             totalWeightElement.textContent = `Poids Total : ${totalWeight} g`;
+             inventoryWeightElement.textContent = `(${totalWeight} g)`;
+
+
+             // Save data
+             if (window.persistenceService && typeof window.persistenceService.saveData === 'function') { window.persistenceService.saveData(window.items, window.packs, window.categories); } else { console.warn('persistenceService.saveData not found'); };
         }
 
-        function renderCategoryManagement() {
-            categoryManagementListElement.innerHTML = '';
+        // Function to render the category management list (explicitly created categories)
+        window.renderCategoryManagement = function renderCategoryManagement() {
+            if (!categoryManagementListElement) return; // Guard
+            categoryManagementListElement.innerHTML = ''; // Clear current list
+
             if (window.categories.length === 0) {
                 categoryManagementListElement.innerHTML = '<li class="text-center text-gray-500">Aucune catégorie créée. Utilisez le champ ci-dessus pour en ajouter.</li>';
             } else {
                 window.categories.forEach(category => {
+                    // Find items assigned to this explicit category
                     const itemsInCategory = window.items.filter(item => item.category === category.name);
                     const itemCount = itemsInCategory.length;
+
                     const categoryHeader = document.createElement('li');
                     categoryHeader.classList.add('category-header');
-                    categoryHeader.dataset.categoryName = category.name;
+                    categoryHeader.dataset.categoryName = category.name; // Store category name for delegation
                     categoryHeader.innerHTML = `
                         <span class="category-name">${category.name || 'Sans catégorie'}</span>
                         <span class="category-item-count">(${itemCount} items)</span>
@@ -317,9 +298,10 @@
 
                     const categoryContent = document.createElement('ul');
                     categoryContent.classList.add('category-content');
-                    categoryContent.dataset.category = category.name;
+                    categoryContent.dataset.category = category.name; // Store category name for delegation
                     categoryManagementListElement.appendChild(categoryContent);
 
+                    // Render items within this category in the management view
                     if (itemsInCategory.length === 0) {
                          const noItemsMessage = document.createElement('li');
                          noItemsMessage.classList.add('text-center', 'text-gray-500', 'py-2');
@@ -328,7 +310,8 @@
                     } else {
                          itemsInCategory.forEach(item => {
                              const listItem = document.createElement('li');
-                             listItem.classList.add('item');
+                             listItem.classList.add('item'); // Use item class for styling
+                              // No weight bar in this view for simplicity
                              listItem.innerHTML = `
                                  <div class="item-details">
                                      <img src="${item.imageUrl || 'https://placehold.co/50x50/eeeeee/aaaaaa?text=No+Img'}"
@@ -347,78 +330,61 @@
                                       <button class="edit-button" data-item-id="${item.id}">Modifier</button>
                                     </div>
                              `;
+                              // Removed delete button from item within category management listener
                              categoryContent.appendChild(listItem);
                          });
                     }
                 });
             }
-             updateCategoryDropdowns();
+             // Update the category dropdowns in forms
+             if (typeof window.updateCategoryDropdowns === 'function') window.updateCategoryDropdowns();
         }
 
-        function addCategory() {
-            console.log('addCategory function called');
-            const categoryName = categoryNameInput.value.trim();
-            if (categoryName === '') {
-                alert('Veuillez entrer le nom de la catégorie.');
-                return;
-            }
-            if (window.categories.some(cat => cat.name.toLowerCase() === categoryName.toLowerCase())) {
-                alert(`La catégorie "${categoryName}" existe déjà.`);
-                return;
-            }
-            window.categories.push({ name: categoryName });
-            console.log('Categories after add:', window.categories);
-            categoryNameInput.value = '';
-            renderCategoryManagement();
-            saveData();
-        }
+        // addCategory and deleteCategory functions are moved to categoryService.js
 
-        function deleteCategory(categoryName) {
-             const itemsInCategory = window.items.filter(item => item.category === categoryName);
-             if (itemsInCategory.length > 0) {
-                 const confirmDelete = confirm(`La catégorie "${categoryName}" contient ${itemsInCategory.length} item(s). Voulez-vous vraiment la supprimer ? Les items ne seront pas supprimés de votre inventaire mais leur catégorie sera effacée.`);
-                 if (!confirmDelete) return;
-                 window.items = window.items.map(item => {
-                     if (item.category === categoryName) {
-                         item.category = '';
-                     }
-                     return item;
-                 });
-             } else {
-                 const confirmDelete = confirm(`Voulez-vous vraiment supprimer la catégorie "${categoryName}" ?`);
-                 if (!confirmDelete) return;
-             }
-            window.categories = window.categories.filter(cat => cat.name !== categoryName);
-            renderAll();
-            saveData();
-        }
+        // Function to update the category dropdowns in the forms
+        window.updateCategoryDropdowns = function updateCategoryDropdowns() {
+            if (!newItemCategorySelect || !editItemCategorySelect) return; // Guard
+            const categorySelects = [newItemCategorySelect, editItemCategorySelect]; // Get references to category select elements
 
-        function updateCategoryDropdowns() {
-            const categorySelects = [newItemCategorySelect, editItemCategorySelect];
             categorySelects.forEach(selectElement => {
-                if (!selectElement) return; // Add guard for missing elements
-                const currentValue = selectElement.value;
+                const currentValue = selectElement.value; // Store the currently selected value
+
+                // Clear existing options except the default one
                 selectElement.innerHTML = '<option value="">-- Sélectionner une Catégorie --</option>';
+
+                // Add categories from the 'categories' array
                 window.categories.forEach(category => {
                     const option = document.createElement('option');
                     option.value = category.name;
                     option.textContent = category.name;
                     selectElement.appendChild(option);
                 });
+
+                // Reapply the stored value if it's still a valid option
                 if (Array.from(selectElement.options).some(option => option.value === currentValue)) {
                     selectElement.value = currentValue;
                 } else {
+                    // If the old value is no longer valid (e.g., category deleted), reset to default
                     selectElement.value = '';
                 }
             });
         }
 
-        function renderPackPacking(packId) {
+
+        // Function to render items within a specific pack for packing view
+        window.renderPackPacking = function renderPackPacking(packId) {
+            if (!packPackingModal || !packingPackNameElement || !packPackingListElement) return; // Guard
             const pack = window.packs.find(p => p.id === packId);
             if (!pack) return;
+
             packingPackNameElement.textContent = `Emballage du Pack : ${pack.name}`;
             packPackingListElement.innerHTML = '';
+
+            // Filter items that belong to this pack
             const itemsInPack = window.items.filter(item => item.packIds && item.packIds.includes(packId));
+
+
             if (itemsInPack.length === 0) {
                  packPackingListElement.innerHTML = '<li class="text-center text-gray-500">Ce pack est vide.</li>';
             } else {
@@ -432,23 +398,34 @@
                     packPackingListElement.appendChild(listItem);
                  });
             }
-            packPackingModal.classList.remove('hidden');
+
+
+            packPackingModal.classList.remove('hidden'); // Show the modal
         }
 
-        function renderPackDetail(packId) {
-             currentManagingPackId = packId;
+        // Function to render the pack detail view
+        window.renderPackDetail = function renderPackDetail(packId) {
+             if (!packDetailTitle || !itemsInPackList || !availableItemsList) return; // Guard
+             window.currentManagingPackId = packId; // Set the currently managed pack ID
              const pack = window.packs.find(p => p.id === packId);
              if (!pack) {
-                 showSection('manage-packs-section');
+                 // If pack not found, maybe show pack list again or an error
+                 if (typeof window.showSection === 'function') window.showSection('manage-packs-section');
                  return;
              }
+
              packDetailTitle.textContent = `Détails du Pack : ${pack.name}`;
              itemsInPackList.innerHTML = '';
              availableItemsList.innerHTML = '';
+
              const itemsInThisPack = window.items.filter(item => item.packIds && item.packIds.includes(packId));
-             const availableItemsToRender = window.items.filter(item => !item.packIds || !item.packIds.includes(packId)); // Renamed
+             // CORRECTED FILTERING LOGIC: Filter items that DO NOT have the current packId in their packIds array
+             const availableItemsData = window.items.filter(item => !item.packIds || !item.packIds.includes(packId));
+
+
              const packTotalWeight = itemsInThisPack.reduce((sum, item) => sum + (parseFloat(item.weight) || 0), 0);
-             const totalInventoryWeightForBar = window.items.reduce((sum, item) => sum + (parseFloat(item.weight) || 0), 0); // Use window.items
+             const totalInventoryWeight = window.items.reduce((sum, item) => sum + (parseFloat(item.weight) || 0), 0);
+
 
              if (itemsInThisPack.length === 0) {
                  itemsInPackList.innerHTML = '<li class="text-center text-gray-500">Aucun item dans ce pack.</li>';
@@ -456,65 +433,96 @@
                  itemsInThisPack.forEach(item => {
                      const listItem = document.createElement('li');
                      listItem.classList.add('pack-detail-item');
-                      if (item.packed) listItem.classList.add('packed');
+                      if (item.packed) {
+                         listItem.classList.add('packed');
+                     }
+
+                     // Bar represents weight relative to pack total weight
                      const itemWeight = parseFloat(item.weight) || 0;
                      const weightPercentage = packTotalWeight > 0 ? (itemWeight / packTotalWeight) * 100 : 0;
+
+
                      listItem.innerHTML = `
                          <div class="weight-bar" style="width: ${weightPercentage}%;"></div>
-                         <img src="${item.imageUrl || 'https://placehold.co/50x50/eeeeee/aaaaaa?text=No+Img'}" onerror="this.onerror=null;this.src='https://placehold.co/50x50/eeeeee/aaaaaa?text=No+Img';" alt="Image de ${item.name}" class="w-10 h-10 rounded-full object-cover mr-2 border border-gray-300">
+                         <img src="${item.imageUrl || 'https://placehold.co/50x50/eeeeee/aaaaaa?text=No+Img'}"
+                              onerror="this.onerror=null;this.src='https://placehold.co/50x50/eeeeee/aaaaaa?text=No+Img';"
+                              alt="Image de ${item.name}"
+                              class="w-10 h-10 rounded-full object-cover mr-2 border border-gray-300">
                          <span class="pack-detail-item-name">${item.name} (${item.weight} g)</span>
                          <div class="pack-detail-actions">
                               <button class="pack-item-packed-button" data-item-id="${item.id}">${item.packed ? 'Déballer' : 'Emballer'}</button> <button class="remove-from-pack-button" data-item-id="${item.id}">Retirer</button>
-                         </div>`;
+                         </div>
+                     `;
                      itemsInPackList.appendChild(listItem);
                  });
              }
-             if (availableItemsToRender.length === 0) { // Use renamed variable
+
+             if (availableItemsData.length === 0) {
                  availableItemsList.innerHTML = '<li class="text-center text-gray-500">Aucun item disponible à ajouter.</li>';
              } else {
-                 availableItemsToRender.forEach(item => { // Use renamed variable
+                 availableItemsData.forEach(item => {
                      const listItem = document.createElement('li');
                      listItem.classList.add('pack-detail-item');
+
+                     // Bar represents weight relative to total inventory weight
                      const itemWeight = parseFloat(item.weight) || 0;
-                     const weightPercentage = totalInventoryWeightForBar > 0 ? (itemWeight / totalInventoryWeightForBar) * 100 : 0; // Use window.items based total
+                     const weightPercentage = totalInventoryWeight > 0 ? (itemWeight / totalInventoryWeight) * 100 : 0;
+
+
                      listItem.innerHTML = `
                          <div class="weight-bar" style="width: ${weightPercentage}%;"></div>
-                         <img src="${item.imageUrl || 'https://placehold.co/50x50/eeeeee/aaaaaa?text=No+Img'}" onerror="this.onerror=null;this.src='https://placehold.co/50x50/eeeeee/aaaaaa?text=No+Img';" alt="Image de ${item.name}" class="w-10 h-10 rounded-full object-cover mr-2 border border-gray-300">
+                         <img src="${item.imageUrl || 'https://placehold.co/50x50/eeeeee/aaaaaa?text=No+Img'}"
+                              onerror="this.onerror=null;this.src='https://placehold.co/50x50/eeeeee/aaaaaa?text=No+Img';"
+                              alt="Image de ${item.name}"
+                              class="w-10 h-10 rounded-full object-cover mr-2 border border-gray-300">
                          <span class="pack-detail-item-name">${item.name} (${item.weight} g)</span>
                          <div class="pack-detail-actions">
                              <button class="add-to-pack-button" data-item-id="${item.id}">Ajeter</button>
-                         </div>`;
+                         </div>
+                     `;
                      availableItemsList.appendChild(listItem);
                  });
              }
-             saveData();
+
+             if (window.persistenceService && typeof window.persistenceService.saveData === 'function') { window.persistenceService.saveData(window.items, window.packs, window.categories); } else { console.warn('persistenceService.saveData not found'); }; // Save data after rendering pack detail (in case of previous changes)
         }
 
-        function renderListByView() {
+        // Function to render the list based on the current view filter
+        window.renderListByView = function renderListByView() {
+             if (!viewFilterSelect || !itemListElement || !totalWeightElement || !inventoryWeightElement) return; // Guard
              const selectedView = viewFilterSelect.value;
-             currentView = selectedView;
+             window.currentView = selectedView; // Update current view state
+
              if (selectedView === 'all') {
-                 renderItems(window.items);
+                 if (typeof window.renderItems === 'function') window.renderItems(window.items); // Render all items
              } else if (selectedView === 'categories') {
-                 renderCategories();
+                 if (typeof window.renderCategories === 'function') window.renderCategories(); // Render grouped by category
              } else if (selectedView.startsWith('pack-')) {
-                 const packId = selectedView.substring(5);
+                 const packId = selectedView.substring(5); // Extract pack ID
                  const itemsInPack = window.items.filter(item => item.packIds && item.packIds.includes(packId));
+                 // For pack view, render items within that pack, and the bar represents their weight relative to the pack's total weight
                  const packTotalWeight = itemsInPack.reduce((sum, item) => sum + (parseFloat(item.weight) || 0), 0);
-                 itemListElement.innerHTML = '';
+                 itemListElement.innerHTML = ''; // Clear current list
                  if (itemsInPack.length === 0) {
                       itemListElement.innerHTML = '<li class="text-center text-gray-500">Ce pack est vide.</li>';
                  } else {
                       itemsInPack.forEach(item => {
                          const listItem = document.createElement('li');
                          listItem.classList.add('item');
-                         if (item.packed) listItem.classList.add('packed');
+                         if (item.packed) {
+                             listItem.classList.add('packed');
+                         }
+
                          const itemWeight = parseFloat(item.weight) || 0;
                          const weightPercentage = packTotalWeight > 0 ? (itemWeight / packTotalWeight) * 100 : 0;
+
                           listItem.innerHTML = `
                              <div class="weight-bar" style="width: ${weightPercentage}%;"></div>
                              <div class="item-details">
-                                 <img src="${item.imageUrl || 'https://placehold.co/50x50/eeeeee/aaaaaa?text=No+Img'}" onerror="this.onerror=null;this.src='https://placehold.co/50x50/eeeeee/aaaaaa?text=No+Img';" alt="Image de ${item.name}" class="w-12 h-12 rounded-full object-cover mr-4 border border-gray-300">
+                                 <img src="${item.imageUrl || 'https://placehold.co/50x50/eeeeee/aaaaaa?text=No+Img'}"
+                                      onerror="this.onerror=null;this.src='https://placehold.co/50x50/eeeeee/aaaaaa?text=No+Img';"
+                                      alt="Image de ${item.name}"
+                                      class="w-12 h-12 rounded-full object-cover mr-4 border border-gray-300">
                                  <span class="item-name">${item.name}</span>
                                  <span class="item-weight">(${item.weight} g)</span>
                                  ${item.brand ? `<span class="item-brand">| ${item.brand}</span>` : ''}
@@ -525,525 +533,579 @@
                              </div>
                              <div class="item-actions">
                                   <button class="edit-button" data-item-id="${item.id}">Modifier</button>
-                                 </div>`;
+                                 </div>
+                         `;
+                         // Removed pack/unpack button from pack view in inventory section
                          itemListElement.appendChild(listItem);
                       });
                  }
-                 const totalWeightVal = window.items.reduce((sum, item) => sum + (parseFloat(item.weight) || 0), 0); // Use window.items
-                 totalWeightElement.textContent = `Poids Total : ${totalWeightVal} g`;
-                 inventoryWeightElement.textContent = `(${totalWeightVal} g)`;
-                 saveData();
+
+                 // Update total weight display (still show total backpack weight)
+                 const totalWeight = window.items.reduce((sum, item) => sum + (parseFloat(item.weight) || 0), 0);
+                 totalWeightElement.textContent = `Poids Total : ${totalWeight} g`;
+                 inventoryWeightElement.textContent = `(${totalWeight} g)`;
+
+                 if (window.persistenceService && typeof window.persistenceService.saveData === 'function') { window.persistenceService.saveData(window.items, window.packs, window.categories); } else { console.warn('persistenceService.saveData not found'); }; // Save data after rendering
              }
         }
 
-        function updateViewFilterOptions() {
+        // Function to update the view filter options (add packs)
+        window.updateViewFilterOptions = function updateViewFilterOptions() {
+             if (!viewFilterSelect) return; // Guard
+             // Remove previous pack options
              viewFilterSelect.querySelectorAll('option[value^="pack-"]').forEach(option => option.remove());
+
+             // Add current packs as view options
              window.packs.forEach(pack => {
                  const option = document.createElement('option');
                  option.value = `pack-${pack.id}`;
                  option.textContent = `Voir Pack : ${pack.name}`;
                  viewFilterSelect.appendChild(option);
              });
-             const currentViewOption = viewFilterSelect.querySelector(`option[value="${currentView}"]`);
+
+             // Ensure the current view is still valid, otherwise reset to 'all'
+             const currentViewOption = viewFilterSelect.querySelector(`option[value="${window.currentView}"]`);
              if (!currentViewOption) {
-                 currentView = 'all';
+                 window.currentView = 'all';
                  viewFilterSelect.value = 'all';
              }
-              renderListByView();
+
+              if (typeof window.renderListByView === 'function') window.renderListByView(); // Re-render list based on updated view
         }
 
-        function renderAll() {
-            renderPacks();
-            renderListByView();
-            renderCategoryManagement();
-            updateCategoryDropdowns();
+
+        // Function to render everything (packs, items based on current view, categories management)
+        window.renderAll = function renderAll() {
+            if (typeof window.renderPacks === 'function') window.renderPacks(); // Render packs list and update dropdown/filter
+            if (typeof window.renderListByView === 'function') window.renderListByView(); // Render items/categories/pack view in Inventory section
+            if (typeof window.renderCategoryManagement === 'function') window.renderCategoryManagement(); // Render category management list
+            if (typeof window.updateCategoryDropdowns === 'function') window.updateCategoryDropdowns(); // Update category dropdowns in forms
         }
 
-        function addItem() {
-            const name = newItemNameInput.value.trim();
-            const weight = parseFloat(newItemWeightInput.value);
-            const brand = newItemBrandInput.value.trim();
-            const category = newItemCategorySelect.value;
-            const tags = newItemTagsInput.value.split(',').map(tag => tag.trim()).filter(tag => tag !== '');
-            const capacity = newItemCapacityInput.value.trim();
-            const imageUrl = newItemImageUrlInput.value.trim();
-            const isConsumable = newItemConsumableInput.checked;
-            const packIds = [];
-            if (name === '') { alert('Veuillez entrer le nom de l\'item.'); return; }
-            if (isNaN(weight) || weight < 0) { alert('Veuillez entrer un poids valide (nombre positif).'); return; }
-            const itemId = Date.now().toString();
-            window.items.push({
-                id: itemId, name: name, weight: weight, brand: brand, category: category,
-                tags: tags, capacity: capacity, imageUrl: imageUrl, isConsumable: isConsumable,
-                packIds: packIds, packed: false
-            });
-            newItemNameInput.value = ''; newItemWeightInput.value = ''; newItemBrandInput.value = '';
-            newItemCategorySelect.value = ''; newItemTagsInput.value = ''; newItemCapacityInput.value = '';
-            newItemImageUrlInput.value = ''; newItemConsumableInput.checked = false;
-            if (newItemImagePreview) newItemImagePreview.style.display = 'none';
-            renderAll();
-        }
+        // addItem, deleteItem, saveEditedItem functions are moved to itemService.js
+        // addPack, deletePack, addItemToPack, removeItemFromPack, unpackAllInCurrentPack functions are moved to packService.js
 
-        function addPack() {
-            console.log('addPack function called');
-            const packNameInput_local = document.getElementById('pack-name');
-            if (!packNameInput_local) {
-                console.error("[APP.JS ADD_PACK] pack-name input not found!");
-                alert('Erreur critique : Champ de nom de pack introuvable.');
-                return;
-            }
-            const packName = packNameInput_local.value.trim();
-            console.log("[APP.JS ADD_PACK] packNameInput_local.value:", packNameInput_local.value, "Trimmed:", packName);
-            if (packName === '') { alert('Veuillez entrer le nom du pack.'); return; }
-            const packId = `pack-${Date.now()}`;
-            window.packs.push({ id: packId, name: packName });
-            console.log('Packs after add:', window.packs);
-            packNameInput_local.value = '';
-            renderPacks();
-            updateViewFilterOptions();
-            saveData();
-        }
-
-        function togglePacked(itemId) {
+        // Function to toggle packed status for an item
+        window.togglePacked = function togglePacked(itemId) {
             const item = window.items.find(item => item.id === itemId);
-            if (item) { item.packed = !item.packed; renderAll(); }
+            if (item) {
+                item.packed = !item.packed;
+                 if (typeof window.renderAll === 'function') window.renderAll(); // Re-render everything to update status and weights
+            }
         }
 
-         function togglePackItemPacked(itemId) {
+        // Function to toggle packed status for an item within the packing modal
+         window.togglePackItemPacked = function togglePackItemPacked(itemId) {
              const item = window.items.find(item => item.id === itemId);
-             if (item) { item.packed = !item.packed; saveData(); }
+             if (item) {
+                 item.packed = !item.packed;
+                 if (window.persistenceService && typeof window.persistenceService.saveData === 'function') { window.persistenceService.saveData(window.items, window.packs, window.categories); } else { console.warn('persistenceService.saveData not found'); }; // Save immediately
+                 // No need to re-render the main list, just update the checkbox state in the modal
+                 // And potentially update the progress bar on the pack list if modal is closed.
+             }
          }
 
-        function deleteItem(itemId) {
-            const itemToDelete = window.items.find(item => item.id === itemId);
-            const confirmDelete = confirm(`Voulez-vous vraiment supprimer l'item "${itemToDelete?.name || 'Inconnu'}" de votre inventaire ?`);
-            if (!confirmDelete) return;
-            window.items = window.items.filter(item => item.id !== itemId);
-            renderAll();
-            saveData();
-        }
-
-        function deletePack(packId) {
-             const itemsInPack = window.items.filter(item => item.packIds && item.packIds.includes(packId));
-             if (itemsInPack.length > 0) {
-                 const packToDelete = window.packs.find(p => p.id === packId);
-                 const confirmDelete = confirm(`Ce pack contient ${itemsInPack.length} item(s). Voulez-vous vraiment le supprimer ? Les items ne seront pas supprimés de votre inventaire mais retirés de ce pack.`);
-                 if (!confirmDelete) return;
-                 window.items = window.items.map(item => {
-                     if (item.packIds && item.packIds.includes(packId)) {
-                         item.packIds = item.packIds.filter(id => id !== packId);
-                     }
-                     return item;
-                 });
-             } else {
-                 const packToDelete = window.packs.find(p => p.id === packId);
-                 const confirmDelete = confirm(`Voulez-vous vraiment supprimer le pack "${packToDelete?.name || 'Inconnu'}" ?`);
-                 if (!confirmDelete) return;
-             }
-            window.packs = window.packs.filter(pack => pack.id !== packId);
-            renderAll();
-            saveData();
-        }
-
-        function addItemToPack(itemId, packId) {
-            const item = window.items.find(item => item.id === itemId);
-            if (item && item.packIds && !item.packIds.includes(packId)) {
-                item.packIds.push(packId);
-                renderPackDetail(packId);
-                renderAll();
-                saveData();
-            }
-        }
-
-        function removeItemFromPack(itemId, packId) {
-             const item = window.items.find(item => item.id === itemId);
-             if (item && item.packIds && item.packIds.includes(packId)) {
-                 item.packIds = item.packIds.filter(id => id !== packId);
-                 item.packed = false;
-                 renderPackDetail(packId);
-                 renderAll();
-                 saveData();
-             }
-        }
-
-        function showSection(sectionId) {
-            console.log('showSection called with:', sectionId);
+        // Function to show a specific content section and hide others
+        window.showSection = function showSection(sectionId) {
+            if (!contentSections || !sidebarLinks) return; // Guard
+            console.log('showSection called with:', sectionId); // Debug log
             contentSections.forEach(section => {
-                section.classList.toggle('active', section.id === sectionId);
+                if (section.id === sectionId) {
+                    section.classList.add('active');
+                    console.log(`Section ${section.id} set to active.`); // Debug log
+                } else {
+                    section.classList.remove('active');
+                }
             });
+
+            // Update active class on sidebar links
             sidebarLinks.forEach(link => {
-                const linkTargetSectionId = link.dataset.section + '-section';
-                link.classList.toggle('active', linkTargetSectionId === sectionId || (link.dataset.section === 'manage-packs' && sectionId === 'pack-detail-section'));
+                const linkTargetSectionId = link.dataset.section + '-section'; // Correctly form the ID from data-section
+                console.log(`Checking link: ${link.dataset.section}, target: ${linkTargetSectionId}, current active: ${sectionId}`); // Debug log
+
+                if (linkTargetSectionId === sectionId ||
+                    (link.dataset.section === 'manage-packs' && sectionId === 'pack-detail-section')
+                ) {
+                     link.classList.add('active');
+                } else {
+                    link.classList.remove('active');
+                }
             });
-             if (sectionId === 'inventory-section') renderListByView();
-             else if (sectionId === 'new-item-section') {
-                 updateCategoryDropdowns();
-                 if (newItemImageUrlInput && newItemImagePreview) updateImagePreview(newItemImageUrlInput.value, newItemImagePreview);
-             }
-             else if (sectionId === 'manage-packs-section') renderPacks();
-             else if (sectionId === 'pack-detail-section' && currentManagingPackId) renderPackDetail(currentManagingPackId);
-             else if (sectionId === 'manage-categories-section') renderCategoryManagement();
-             else if (sectionId === 'generate-pack-section') {
-                 if(generatedItemsListElement) generatedItemsListElement.innerHTML = '<li class="text-center text-gray-500">Aucune suggestion d\'item générée. Veuillez utiliser le formulaire ci-dessus.</li>';
-                 if(generatedPackResultsDiv) generatedPackResultsDiv.classList.remove('hidden');
+
+             // Perform specific rendering based on the section shown
+             if (sectionId === 'inventory-section') {
+                 if (typeof window.renderListByView === 'function') window.renderListByView();
+             } else if (sectionId === 'new-item-section') {
+                 if (typeof window.updateCategoryDropdowns === 'function') window.updateCategoryDropdowns(); // Ensure dropdown is populated when showing this section
+                 if (newItemImageUrlInput && newItemImagePreview && typeof window.updateImagePreview === 'function') window.updateImagePreview(newItemImageUrlInput.value, newItemImagePreview); // Update preview when showing new item form
+             } else if (sectionId === 'manage-packs-section') {
+                 if (typeof window.renderPacks === 'function') window.renderPacks(); // Ensure pack list is up-to-date
+             } else if (sectionId === 'pack-detail-section' && window.currentManagingPackId) {
+                 if (typeof window.renderPackDetail === 'function') window.renderPackDetail(window.currentManagingPackId); // Render the details of the currently managed pack
+             } else if (sectionId === 'manage-categories-section') {
+                 if (typeof window.renderCategoryManagement === 'function') window.renderCategoryManagement(); // Render the category management page
+             } else if (sectionId === 'generate-pack-section') {
+                 // Reset the content of the generated items list and ensure message is shown
+                 if (generatedItemsListElement) generatedItemsListElement.innerHTML = '<li class="text-center text-gray-500">Aucune suggestion d\'item générée. Veuillez utiliser le formulaire ci-dessus.</li>';
+                 if (generatedPackResultsDiv) generatedPackResultsDiv.classList.remove('hidden'); // Ensure results div is visible
              }
         }
 
-        function openEditModal(itemId) {
+        // Function to open the edit item modal and populate it
+        window.openEditModal = function openEditModal(itemId) {
+            if (!editItemModal || !editItemNameInput || !editingItemIdInput) return; // Guard
             const itemToEdit = window.items.find(item => item.id === itemId);
             if (!itemToEdit) return;
+
+            // Populate the edit form fields
             editItemNameInput.value = itemToEdit.name;
             editItemWeightInput.value = itemToEdit.weight;
             editItemBrandInput.value = itemToEdit.brand;
-            editItemCategorySelect.value = itemToEdit.category;
-            editItemTagsInput.value = itemToEdit.tags ? itemToEdit.tags.join(', ') : '';
+            editItemCategorySelect.value = itemToEdit.category; // Set selected value in select
+            editItemTagsInput.value = itemToEdit.tags ? itemToEdit.tags.join(', ') : ''; // Join tags array for input
             editItemCapacityInput.value = itemToEdit.capacity;
             editItemImageUrlInput.value = itemToEdit.imageUrl;
             editItemConsumableInput.checked = itemToEdit.isConsumable;
+
+            // Store the ID of the item being edited
             editingItemIdInput.value = itemId;
-            updateCategoryDropdowns();
-            if (editItemImageUrlInput && editItemImagePreview) updateImagePreview(itemToEdit.imageUrl, editItemImagePreview);
+
+            // Ensure category dropdown is populated before showing modal
+            if (typeof window.updateCategoryDropdowns === 'function') window.updateCategoryDropdowns();
+            if (editItemImageUrlInput && editItemImagePreview && typeof window.updateImagePreview === 'function') window.updateImagePreview(itemToEdit.imageUrl, editItemImagePreview); // Update preview when opening edit modal
+
+            // Hide loading indicator
             if (editItemLoadingIndicator) editItemLoadingIndicator.classList.add('hidden');
-            if (editItemModal) editItemModal.style.display = 'block';
+
+            // Show the modal
+            editItemModal.style.display = 'block';
         }
 
-        function saveEditedItem() {
-            const itemId = editingItemIdInput.value;
-            const itemIndex = window.items.findIndex(item => item.id === itemId);
-            if (itemIndex === -1) { alert('Item not found.'); return; }
+        // saveEditedItem function is moved to itemService.js
 
-            const updatedName = editItemNameInput.value.trim();
-            const updatedWeight = parseFloat(editItemWeightInput.value);
-            const updatedBrand = editItemBrandInput.value.trim();
-            const updatedCategory = editItemCategorySelect.value;
-            const updatedTags = editItemTagsInput.value.split(',').map(tag => tag.trim()).filter(tag => tag !== '');
-            const updatedCapacity = editItemCapacityInput.value.trim();
-            const updatedImageUrl = editItemImageUrlInput.value.trim();
-            const updatedIsConsumable = editItemConsumableInput.checked;
-
-            if (updatedName === '') { alert('Veuillez entrer le nom de l\'item.'); return; }
-            if (isNaN(updatedWeight) || updatedWeight < 0) { alert('Veuillez entrer un poids valide (nombre positif).'); return; }
-
-            window.items[itemIndex] = {
-                ...window.items[itemIndex],
-                id: itemId, name: updatedName, weight: updatedWeight, brand: updatedBrand,
-                category: updatedCategory, tags: updatedTags, capacity: updatedCapacity,
-                imageUrl: updatedImageUrl, isConsumable: updatedIsConsumable
-            };
+        // Function to close the edit item modal
+        window.closeEditModal = function closeEditModal() {
             if (editItemModal) editItemModal.style.display = 'none';
-            if (editItemImagePreview) editItemImagePreview.style.display = 'none';
-            renderAll();
-            if (currentManagingPackId && document.getElementById('pack-detail-section').classList.contains('active')) {
-                 renderPackDetail(currentManagingPackId);
-            }
-            if (document.getElementById('manage-categories-section').classList.contains('active')) {
-                 renderCategoryManagement();
-            }
-            saveData();
+            if (editItemImagePreview) editItemImagePreview.style.display = 'none'; // Hide preview when closing modal
         }
 
-        function closeEditModal() {
-            if (editItemModal) editItemModal.style.display = 'none';
-            if (editItemImagePreview) editItemImagePreview.style.display = 'none';
-        }
-
-         function togglePackItemPackedOnDetailPage(itemId) {
+         // Function to toggle packed status for an item specifically on the pack detail page
+        window.togglePackItemPackedOnDetailPage = function togglePackItemPackedOnDetailPage(itemId) {
             const item = window.items.find(item => item.id === itemId);
-            if (item && currentManagingPackId) {
+            if (item && window.currentManagingPackId) {
                 item.packed = !item.packed;
-                saveData();
-                renderPackDetail(currentManagingPackId);
-                renderAll();
+                if (window.persistenceService && typeof window.persistenceService.saveData === 'function') { window.persistenceService.saveData(window.items, window.packs, window.categories); } else { console.warn('persistenceService.saveData not found'); }; // Save immediately
+                if (typeof window.renderPackDetail === 'function') window.renderPackDetail(window.currentManagingPackId); // Re-render the pack detail page
+                if (typeof window.renderAll === 'function') window.renderAll(); // Re-render everything to update pack progress bars
             }
         }
 
-        function unpackAllInCurrentPack() {
-            console.log(`Déclenchement de la fonction unpackAllInCurrentPack pour le pack ID: ${currentManagingPackId}`);
-            if (currentManagingPackId) {
-                const itemsInPack = window.items.filter(item => item.packIds && item.packIds.includes(currentManagingPackId));
-                console.log(`Nombre d'items dans le pack: ${itemsInPack.length}`);
-                if (itemsInPack.length > 0) {
-                    console.log("Déballage des items...");
-                    itemsInPack.forEach(item => {
-                        item.packed = false;
-                         console.log(`Item déballé: ${item.name} (ID: ${item.id})`);
-                    });
-                    saveData();
-                    console.log("Données sauvegardées.");
-                    renderPackDetail(currentManagingPackId);
-                    renderAll();
-                    console.log("Affichage mis à jour.");
-                } else {
-                     alert("Ce pack est déjà vide ou ne contient pas d'items à déballer.");
-                     console.log("Pack vide ou aucun item à déballer.");
-                }
-            } else {
-                 console.log("Aucun pack actuellement géré.");
-            }
-        }
+        // unpackAllInCurrentPack is moved to packService.js
 
-        async function callGeminiAPI(prompt, schema = null) {
-            let chatHistory = [];
-            chatHistory.push({ role: "user", parts: [{ text: prompt }] });
-            const payload = { contents: chatHistory };
-            if (schema) {
-                payload.generationConfig = { responseMimeType: "application/json", responseSchema: schema };
-            }
-            const apiKey = "";
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-            try {
-                const response = await fetch(apiUrl, {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
-                });
-                if (!response.ok) {
-                    const errorBody = await response.json(); console.error('API Error:', errorBody);
-                    throw new Error(`API request failed with status ${response.status}: ${JSON.stringify(errorBody)}`);
-                }
-                const result = await response.json();
-                if (result.candidates && result.candidates.length > 0 &&
-                    result.candidates[0].content && result.candidates[0].content.parts &&
-                    result.candidates[0].content.parts.length > 0) {
-                    const text = result.candidates[0].content.parts[0].text;
-                    return schema ? JSON.parse(text) : text;
-                } else {
-                    console.warn('Unexpected API response structure:', result);
-                    throw new Error('Unexpected API response structure or no content.');
-                }
-            } catch (error) {
-                console.error('Error calling Gemini API:', error);
-                alert('Erreur lors de l\'appel à l\'IA : ' + error.message); return null;
-            }
-        }
+        // callGeminiAPI, callImagenAPI, suggestItemDetails, generatePackList
+        // have been moved to services/apiService.js
 
-        async function callImagenAPI(prompt) {
-            const imagePayload = { instances: { prompt: prompt }, parameters: { "sampleCount": 1} };
-            const apiKey = "";
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
-            try {
-                const response = await fetch(apiUrl, {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(imagePayload)
-                });
-                if (!response.ok) {
-                    const errorBody = await response.json(); console.error('Image API Error:', errorBody);
-                    throw new Error(`Image API request failed with status ${response.status}: ${JSON.stringify(errorBody)}`);
-                }
-                const result = await response.json();
-                if (result.predictions && result.predictions.length > 0 && result.predictions[0].bytesBase64Encoded) {
-                    return `data:image/png;base64,${result.predictions[0].bytesBase64Encoded}`;
-                } else { console.warn('Unexpected Image API response structure:', result); return null; }
-            } catch (error) { console.error('Error calling Imagen API:', error); return null; }
-        }
-
-        function updateImagePreview(url, imgElement) {
-            if (!imgElement) return; // Guard if element doesn't exist
+        /**
+         * Updates the source of an image preview element.
+         * If the URL is empty, the image preview is hidden.
+         * If the image fails to load, it falls back to a placeholder.
+         * @param {string} url The URL for the image.
+         * @param {HTMLImageElement} imgElement The <img> element to update.
+         */
+        window.updateImagePreview = function updateImagePreview(url, imgElement) {
+            if (!imgElement) return; // Guard
             if (url && url.trim() !== '') {
-                imgElement.src = url; imgElement.style.display = 'block';
+                imgElement.src = url;
+                imgElement.style.display = 'block'; // Show the image
             } else {
-                imgElement.src = 'https://placehold.co/80x80/eeeeee/aaaaaa?text=Image';
-                imgElement.style.display = 'none';
+                imgElement.src = 'https://placehold.co/80x80/eeeeee/aaaaaa?text=Image'; // Fallback to a generic placeholder
+                imgElement.style.display = 'none'; // Hide if no URL
             }
         }
 
-        async function suggestItemDetails(itemName, itemBrand, targetInputFields) {
-            if (!itemName) { alert("Veuillez entrer le nom de l'item pour obtenir des suggestions."); return; }
-            const loadingIndicator = targetInputFields === 'new' ? newItemLoadingIndicator : editItemLoadingIndicator;
-            const itemWeightInput = targetInputFields === 'new' ? newItemWeightInput : editItemWeightInput;
-            const categorySelect = targetInputFields === 'new' ? newItemCategorySelect : editItemCategorySelect;
-            const imageUrlInput = targetInputFields === 'new' ? newItemImageUrlInput : editItemImageUrlInput;
-            const imagePreview = targetInputFields === 'new' ? newItemImagePreview : editItemImagePreview;
+        // LLM Feature functions (callGeminiAPI, callImagenAPI, suggestItemDetails, generatePackList)
+        // have been moved to services/apiService.js
 
-            if(loadingIndicator) loadingIndicator.classList.remove('hidden');
-            [newItemNameInput, newItemBrandInput, newItemCategorySelect, newItemWeightInput, newItemImageUrlInput,
-             editItemNameInput, editItemBrandInput, editItemCategorySelect, editItemWeightInput, editItemImageUrlInput].forEach(el => { if(el) el.disabled = true; });
 
-            let suggestedCategory = 'Divers'; let estimatedWeight = 0;
-            const textPrompt = `Given an item named "${itemName}" and brand "${itemBrand || 'N/A'}", suggest a suitable category and an estimated realistic weight in grams. Provide the response as a JSON object with 'suggestedCategory' (string) and 'estimated_weight_grams' (number). The category should be a single word. Example: {"suggestedCategory": "Camping", "estimated_weight_grams": 1500}. The suggested category must be one of the following, if no direct match, pick the closest one: ${window.categories.map(cat => cat.name).join(', ')}. If none are suitable, suggest 'Divers'.`;
-            const textSchema = { type: "OBJECT", properties: { "suggestedCategory": { "type": "STRING" }, "estimated_weight_grams": { "type": "NUMBER" }}, required: ["suggestedCategory", "estimated_weight_grams"] };
-            try {
-                const textResponse = await callGeminiAPI(textPrompt, textSchema);
-                if (textResponse) {
-                    suggestedCategory = textResponse.suggestedCategory; estimatedWeight = textResponse.estimated_weight_grams;
-                    const existingCategoryNames = window.categories.map(cat => cat.name.toLowerCase());
-                    if (!existingCategoryNames.includes(suggestedCategory.toLowerCase())) {
-                        const closestCategory = existingCategoryNames.find(catName => suggestedCategory.toLowerCase().includes(catName));
-                        suggestedCategory = closestCategory ? window.categories.find(cat => cat.name.toLowerCase() === closestCategory).name : 'Divers';
+        // Event listener to add selected generated items to inventory
+        if (addSelectedGeneratedItemsButton) {
+            addSelectedGeneratedItemsButton.addEventListener('click', function() {
+                if (!generatedItemsListElement) return;
+                const checkboxes = generatedItemsListElement.querySelectorAll('.add-generated-item-checkbox:checked');
+                let itemsAddedCount = 0;
+                checkboxes.forEach(checkbox => {
+                    const name = checkbox.dataset.name;
+                    const weight = parseFloat(checkbox.dataset.weight);
+                    const category = checkbox.dataset.category;
+
+                    // Only add if it's not marked as an existing item (checkbox only present for new items)
+                    if (name && !isNaN(weight)) {
+                        // Check if category exists, if not, add it
+                        if (!window.categories.some(cat => cat.name === category)) {
+                            window.categories.push({ name: category });
+                        }
+
+                        // Add item to the main items array
+                        window.items.push({
+                            id: `gen-item-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`, // More unique ID
+                            name: name,
+                            weight: weight, // Use 'weight' property as expected by the rest of the app
+                            brand: '', // No brand from LLM for now
+                            category: category,
+                            tags: [], // No tags from LLM for now
+                            capacity: '',
+                            imageUrl: '', // Will be empty for generated items as Imagen API is not used here for direct fill
+                            isConsumable: false,
+                            packIds: [],
+                            packed: false
+                        });
+                        itemsAddedCount++;
                     }
-                    if(itemWeightInput) itemWeightInput.value = estimatedWeight;
-                    if (suggestedCategory === 'Divers' && !window.categories.some(cat => cat.name === 'Divers')) {
-                        window.categories.push({ name: 'Divers' }); updateCategoryDropdowns(); saveData();
-                    }
-                    if(categorySelect) categorySelect.value = suggestedCategory;
-                }
-            } catch (error) { console.error("Erreur lors de la suggestion de texte:", error); }
+                });
 
-            const imageGenerationPrompt = `Une photo claire de ${itemName} ${itemBrand ? `de la marque ${itemBrand}` : ''}, prise en studio, sur fond uni blanc.`;
-            try {
-                const genImageUrl = await callImagenAPI(imageGenerationPrompt);
-                if (genImageUrl) {
-                    if(imageUrlInput) imageUrlInput.value = genImageUrl;
-                    updateImagePreview(genImageUrl, imagePreview);
+                if (itemsAddedCount > 0) {
+                    alert(`${itemsAddedCount} item(s) suggéré(s) ajouté(s) à votre inventaire !`);
+                    if (typeof window.renderAll === 'function') window.renderAll(); // Re-render all lists to show new items and categories
+                    // Clear generated items after adding
+                    generatedItemsListElement.innerHTML = '<li class="text-center text-gray-500">Aucune suggestion d\'item générée. Veuillez utiliser le formulaire ci-dessus.</li>'; // Reset message
+                    // Optionally clear the generation inputs
+                    if (genPackDestinationInput) genPackDestinationInput.value = '';
+                    if (genPackDurationInput) genPackDurationInput.value = '3';
+                    if (genPackActivityInput) genPackActivityInput.value = '';
                 } else {
-                    if(imageUrlInput) imageUrlInput.value = `https://placehold.co/100x100/eeeeee/aaaaaa?text=${encodeURIComponent(itemName.split(' ')[0])}`;
-                    if(imageUrlInput) updateImagePreview(imageUrlInput.value, imagePreview);
-                }
-            } catch (error) {
-                console.error("Erreur lors de la génération d'image:", error);
-                if(imageUrlInput) imageUrlInput.value = `https://placehold.co/100x100/eeeeee/aaaaaa?text=Erreur`;
-                if(imageUrlInput) updateImagePreview(imageUrlInput.value, imagePreview);
-            } finally {
-                if(loadingIndicator) loadingIndicator.classList.add('hidden');
-                [newItemNameInput, newItemBrandInput, newItemCategorySelect, newItemWeightInput, newItemImageUrlInput,
-                 editItemNameInput, editItemBrandInput, editItemCategorySelect, editItemWeightInput, editItemImageUrlInput].forEach(el => { if(el) el.disabled = false; });
-                renderAll();
-            }
-        }
-
-        async function generatePackList() {
-            const destination = genPackDestinationInput.value.trim();
-            const duration = genPackDurationInput.value;
-            const activity = genPackActivityInput.value.trim();
-            if (!destination || !duration || !activity) {
-                if(generatedItemsListElement) generatedItemsListElement.innerHTML = '<li class="text-center text-gray-500">Veuillez remplir la destination, la durée et l\'activité pour générer une liste.</li>';
-                if(generatedPackResultsDiv) generatedPackResultsDiv.classList.remove('hidden'); return;
-            }
-            if (duration <= 0) {
-                if(generatedItemsListElement) generatedItemsListElement.innerHTML = '<li class="text-center text-gray-500">La durée doit être un nombre positif.</li>';
-                if(generatedPackResultsDiv) generatedPackResultsDiv.classList.remove('hidden'); return;
-            }
-            if(generatePackLoadingIndicator) generatePackLoadingIndicator.classList.remove('hidden');
-            if(generatePackListButton) generatePackListButton.disabled = true;
-            const existingInventory = window.items.map(item => ({ name: item.name, weight: item.weight, category: item.category }));
-            const inventoryPromptPart = existingInventory.length > 0 ? `En considérant l'inventaire existant de l'utilisateur qui comprend : ${JSON.stringify(existingInventory)}. ` : '';
-            const prompt = `${inventoryPromptPart}Générez une liste d'équipement. Le format de sortie doit être un tableau JSON d'objets. Chaque objet doit avoir "name" (chaîne de caractères), "estimated_weight_grams" (nombre, en grammes, par exemple 1500), "category" (chaîne de caractères), et un champ supplémentaire "is_existing_inventory" (booléen, vrai si l'élément provient de l'inventaire existant, faux sinon). Respectez strictement le schéma JSON. Suggérez entre 5 et 10 éléments essentiels pour un voyage de type "${activity}" à "${destination}" pour "${duration}" jour(s). Priorisez les éléments de l'inventaire existant s'ils sont appropriés. Si aucun élément existant n'est approprié, suggérez un nouvel élément. Les poids doivent être des estimations réalistes en grammes. La catégorie doit être l'une des catégories existantes si possible : ${window.categories.map(cat => cat.name).join(', ')}. Si aucune catégorie existante n'est appropriée, utilisez 'Divers'.`;
-            const schema = { type: "ARRAY", items: { type: "OBJECT", properties: { "name": { "type": "STRING" }, "estimated_weight_grams": { "type": "NUMBER" }, "category": { "type": "STRING" }, "is_existing_inventory": { "type": "BOOLEAN" }}, required: ["name", "estimated_weight_grams", "category", "is_existing_inventory"] }};
-            try {
-                const response = await callGeminiAPI(prompt, schema);
-                if(generatedItemsListElement) generatedItemsListElement.innerHTML = '';
-                if (response && Array.isArray(response) && response.length > 0) {
-                    if(generatedPackResultsDiv) generatedPackResultsDiv.classList.remove('hidden');
-                    response.forEach(item => {
-                        const listItem = document.createElement('li');
-                        listItem.classList.add('item-suggestion', item.is_existing_inventory ? 'existing-item' : 'new-item');
-                        let checkboxHtml = !item.is_existing_inventory
-                            ? `<input type="checkbox" class="add-generated-item-checkbox" data-name="${item.name}" data-weight="${item.estimated_weight_grams}" data-category="${item.category}">`
-                            : `<span class="text-xs text-blue-700 font-semibold ml-2">(Déjà dans l'inventaire)</span>`;
-                        listItem.innerHTML = `<div><span class="item-name">${item.name}</span><span class="item-details">(${item.estimated_weight_grams} g) | Catégorie: ${item.category}</span></div>${checkboxHtml}`;
-                        if(generatedItemsListElement) generatedItemsListElement.appendChild(listItem);
-                    });
-                } else {
-                    if(generatedPackResultsDiv) generatedPackResultsDiv.classList.remove('hidden');
-                    if(generatedItemsListElement) generatedItemsListElement.innerHTML = '<li class="text-center text-gray-500">Aucune suggestion d\'item générée. Veuillez essayer une autre combinaison.</li>';
-                }
-            } finally {
-                if(generatePackLoadingIndicator) generatePackLoadingIndicator.classList.add('hidden');
-                if(generatePackListButton) generatePackListButton.disabled = false;
-            }
-        }
-
-        if(addSelectedGeneratedItemsButton) addSelectedGeneratedItemsButton.addEventListener('click', function() {
-            const checkboxes = generatedItemsListElement.querySelectorAll('.add-generated-item-checkbox:checked');
-            let itemsAddedCount = 0;
-            checkboxes.forEach(checkbox => {
-                const name = checkbox.dataset.name; const weight = parseFloat(checkbox.dataset.weight); const category = checkbox.dataset.category;
-                if (name && !isNaN(weight)) {
-                    if (!window.categories.some(cat => cat.name === category)) window.categories.push({ name: category });
-                    window.items.push({
-                        id: `gen-item-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`, name: name, weight: weight,
-                        brand: '', category: category, tags: [], capacity: '', imageUrl: '',
-                        isConsumable: false, packIds: [], packed: false
-                    });
-                    itemsAddedCount++;
+                    alert("Aucun item sélectionné à ajouter.");
                 }
             });
-            if (itemsAddedCount > 0) {
-                alert(`${itemsAddedCount} item(s) suggéré(s) ajouté(s) à votre inventaire !`); renderAll();
-                if(generatedItemsListElement) generatedItemsListElement.innerHTML = '<li class="text-center text-gray-500">Aucune suggestion d\'item générée. Veuillez utiliser le formulaire ci-dessus.</li>';
-                if(genPackDestinationInput) genPackDestinationInput.value = '';
-                if(genPackDurationInput) genPackDurationInput.value = '3';
-                if(genPackActivityInput) genPackActivityInput.value = '';
-            } else { alert("Aucun item sélectionné à ajouter."); }
-        });
+        }
 
-        if(addItemButton) addItemButton.addEventListener('click', addItem);
-        if(suggestNewItemDetailsButton) suggestNewItemDetailsButton.addEventListener('click', () => suggestItemDetails(newItemNameInput.value, newItemBrandInput.value, 'new'));
-        if(addPackButton) addPackButton.addEventListener('click', addPack);
-        if(addCategoryButton) addCategoryButton.addEventListener('click', addCategory);
-        if(generatePackListButton) generatePackListButton.addEventListener('click', generatePackList);
 
-        const newItemUrlInput = document.querySelector('#new-item-section input[type="url"]');
-        if(newItemUrlInput) newItemUrlInput.addEventListener('keypress', function(event) { if (event.key === 'Enter') addItem(); });
-
-        const packNameInput_for_listener = document.getElementById('pack-name');
-        if (packNameInput_for_listener) {
-            packNameInput_for_listener.addEventListener('keypress', function(event) { if (event.key === 'Enter') addPack(); });
-        } else { console.warn("Pack name input not found for keypress listener setup."); }
-
-        if(categoryNameInput) categoryNameInput.addEventListener('keypress', function(event) { if (event.key === 'Enter') addCategory(); });
-
-        if(newItemImageUrlInput) newItemImageUrlInput.addEventListener('input', () => updateImagePreview(newItemImageUrlInput.value, newItemImagePreview));
-        if(editItemImageUrlInput) editItemImageUrlInput.addEventListener('input', () => updateImagePreview(editItemImageUrlInput.value, editItemImagePreview));
-
-        const inventorySection = document.getElementById('inventory-section');
-        if(inventorySection) inventorySection.addEventListener('click', function(event) {
-            const target = event.target; const itemId = target.dataset.itemId;
-            if (target.classList.contains('edit-button')) openEditModal(itemId);
-            else if (target.classList.contains('delete-button')) {
-                 const itemToDelete = window.items.find(item => item.id === itemId);
-                 const confirmDelete = confirm(`Voulez-vous vraiment supprimer l'item "${itemToDelete?.name || 'Inconnu'}" de votre inventaire ?`);
-                 if (confirmDelete) deleteItem(itemId);
-            }
-        });
-
-        const managePacksSection = document.getElementById('manage-packs-section');
-         if(managePacksSection) managePacksSection.addEventListener('click', function(event) {
-             const target = event.target; const packId = target.dataset.packId;
-             if (target.classList.contains('view-pack-button')) { showSection('pack-detail-section'); renderPackDetail(packId); }
-             else if (target.classList.contains('delete-button')) deletePack(packId);
-         });
-
-         if(packDetailSection) packDetailSection.addEventListener('click', function(event) {
-             const target = event.target; const itemId = target.dataset.itemId;
-             if (target.classList.contains('add-to-pack-button') && currentManagingPackId) addItemToPack(itemId, currentManagingPackId);
-             else if (target.classList.contains('remove-from-pack-button') && currentManagingPackId) removeItemFromPack(itemId, currentManagingPackId);
-             else if (target.classList.contains('pack-item-packed-button')) togglePackItemPackedOnDetailPage(itemId);
-         });
-
-         if(unpackAllButton) unpackAllButton.addEventListener('click', unpackAllInCurrentPack);
-         if(viewFilterSelect) viewFilterSelect.addEventListener('change', renderListByView);
-         if(packPackingListElement) packPackingListElement.addEventListener('change', function(event) {
-             if (event.target.type === 'checkbox') togglePackItemPacked(event.target.dataset.itemId);
-         });
-
-         if(closePackingModalButton) closePackingModalButton.addEventListener('click', function() { if(packPackingModal) packPackingModal.classList.add('hidden'); renderAll(); });
-         if(packPackingModal) packPackingModal.addEventListener('click', function(event) { if (event.target === packPackingModal) { packPackingModal.classList.add('hidden'); renderAll(); }});
-
-        if(saveItemButton) saveItemButton.addEventListener('click', saveEditedItem);
-        if(suggestEditItemDetailsButton) suggestEditItemDetailsButton.addEventListener('click', () => suggestItemDetails(editItemNameInput.value, editItemBrandInput.value, 'edit'));
-        if(closeEditModalButton) closeEditModalButton.addEventListener('click', closeEditModal);
-        if(editItemModal) editItemModal.addEventListener('click', function(event) { if (event.target === editItemModal) closeEditModal(); });
-
-        if(categoryManagementListElement) categoryManagementListElement.addEventListener('click', function(event) {
-             const target = event.target;
-             const categoryHeaderTarget = target.closest('.category-header');
-             if (categoryHeaderTarget) {
-                 const categoryContent = categoryHeaderTarget.nextElementSibling;
-                 const chevronIcon = categoryHeaderTarget.querySelector('.fas');
-                 if (categoryContent && categoryContent.classList.contains('category-content')) {
-                     categoryContent.classList.toggle('is-visible');
-                     if(chevronIcon) {chevronIcon.classList.toggle('fa-chevron-down'); chevronIcon.classList.toggle('fa-chevron-up');}
-                 }
-             }
-             if (target.classList.contains('delete-button') && target.dataset.categoryName) deleteCategory(target.dataset.categoryName);
-             if (target.classList.contains('edit-button') && target.dataset.itemId) openEditModal(target.dataset.itemId);
-         });
-
-         sidebarLinks.forEach(link => {
-             link.addEventListener('click', function(event) {
-                 event.preventDefault();
-                 const sectionId = this.dataset.section + '-section';
-                 console.log('Sidebar link clicked, target sectionId:', sectionId);
-                 showSection(sectionId);
+        // Event listeners
+        if (addItemButton) {
+            addItemButton.addEventListener('click', () => {
+                // This will be updated to call window.itemService.addItem
+                // For now, body is commented out.
+                // const name = newItemNameInput.value.trim();
+                // ... gather other input values ...
+                // if (window.itemService) window.itemService.addItem({ name, weight, ... });
+                // if (typeof window.renderAll === 'function') window.renderAll();
+                // ... clear inputs ...
+                console.log("Add item button clicked - functionality moved to itemService.");
+            });
+        }
+        if (suggestNewItemDetailsButton && newItemNameInput && newItemBrandInput) {
+             suggestNewItemDetailsButton.addEventListener('click', () => {
+                // This will be updated to call window.apiService.suggestItemDetails
+                // For now, body is commented out.
+                // window.suggestItemDetails(newItemNameInput.value, newItemBrandInput.value, 'new')
+                console.log("Suggest new item details button clicked - functionality moved to apiService.");
              });
-         });
-        loadData();
-        showSection('inventory-section');
+        }
+        if (addPackButton) {
+            addPackButton.addEventListener('click', () => {
+                // This will be updated to call window.packService.addPack
+                // For now, body is commented out.
+                // const packName = packNameInput.value.trim();
+                // if (window.packService) window.packService.addPack(packName);
+                // if (typeof window.renderPacks === 'function') window.renderPacks();
+                // if (typeof window.updateViewFilterOptions === 'function') window.updateViewFilterOptions();
+                // packNameInput.value = '';
+                console.log("Add pack button clicked - functionality moved to packService.");
+            });
+        }
+        if (addCategoryButton) {
+            addCategoryButton.addEventListener('click', () => {
+                // This will be updated to call window.categoryService.addCategory
+                // For now, body is commented out.
+                // const categoryName = categoryNameInput.value.trim();
+                // if(window.categoryService) window.categoryService.addCategory(categoryName);
+                // if(typeof window.renderCategoryManagement === 'function') window.renderCategoryManagement();
+                // categoryNameInput.value = '';
+                console.log("Add category button clicked - functionality moved to categoryService.");
+            });
+        }
+        if (generatePackListButton) {
+            generatePackListButton.addEventListener('click', () => {
+                // This will be updated to call window.apiService.generatePackList
+                // For now, body is commented out.
+                // window.generatePackList()
+                console.log("Generate pack list button clicked - functionality moved to apiService.");
+            });
+        }
+
+
+        // Allow adding item by pressing Enter in the last input field (image URL) in the new item section
+        const newItemUrlField = document.querySelector('#new-item-section input[type="url"]');
+        if (newItemUrlField) {
+            newItemUrlField.addEventListener('keypress', function(event) {
+                if (event.key === 'Enter') {
+                    // This will be updated to call window.itemService.addItem
+                    // For now, body is commented out.
+                    // if (typeof window.addItem === 'function') window.addItem(); // Old call
+                    console.log("Enter in newItemUrlField - addItem functionality moved to itemService.");
+                }
+            });
+        }
+
+
+         // Allow adding pack by pressing Enter in the pack name field
+         if (packNameInput) {
+             packNameInput.addEventListener('keypress', function(event) {
+                 if (event.key === 'Enter') {
+                    // This will be updated to call window.packService.addPack
+                    // For now, body is commented out.
+                    // if (typeof window.addPack === 'function') window.addPack(); // Old call
+                    console.log("Enter in packNameInput - addPack functionality moved to packService.");
+                 }
+             });
+         }
+
+         // Allow adding category by pressing Enter in the category name field
+         if (categoryNameInput) {
+             categoryNameInput.addEventListener('keypress', function(event) {
+                 if (event.key === 'Enter') {
+                    // This will be updated to call window.categoryService.addCategory
+                    // For now, body is commented out.
+                    // if (typeof window.addCategory === 'function') window.addCategory(); // Old call
+                    console.log("Enter in categoryNameInput - addCategory functionality moved to categoryService.");
+                 }
+             });
+         }
+
+        // New: Event listeners for image URL input to update preview
+        if (newItemImageUrlInput && newItemImagePreview) newItemImageUrlInput.addEventListener('input', () => { if (typeof window.updateImagePreview === 'function') window.updateImagePreview(newItemImageUrlInput.value, newItemImagePreview); });
+        if (editItemImageUrlInput && editItemImagePreview) editItemImageUrlInput.addEventListener('input', () => { if (typeof window.updateImagePreview === 'function') window.updateImagePreview(editItemImageUrlInput.value, editItemImagePreview); });
+
+
+        // Event delegation for item actions (edit, delete) within the inventory section
+        const inventorySection = document.getElementById('inventory-section');
+        if (inventorySection) {
+            inventorySection.addEventListener('click', function(event) {
+                const target = event.target;
+                const itemId = target.dataset.itemId; // Get the item ID from data attribute
+
+                if (target.classList.contains('edit-button')) {
+                     if (typeof window.openEditModal === 'function') window.openEditModal(itemId); // openEditModal remains for now
+                } else if (target.classList.contains('delete-button')) {
+                    // This will be updated to call window.itemService.deleteItem
+                    // For now, body is commented out.
+                    // if (typeof window.deleteItem === 'function') window.deleteItem(itemId); // Old call
+                    console.log("Delete item button in inventory clicked - functionality moved to itemService.");
+                    // Example of how it might be called:
+                    // if (window.itemService) window.itemService.deleteItem(itemId, window.confirm);
+                    // if (typeof window.renderAll === 'function') window.renderAll();
+                }
+            });
+        }
+
+
+         // Event delegation for pack actions (view/manage, delete) within the manage packs section
+         const managePacksSection = document.getElementById('manage-packs-section');
+         if (managePacksSection) {
+             managePacksSection.addEventListener('click', function(event) {
+                 const target = event.target;
+                 const packId = target.dataset.packId; // Get the pack ID from data attribute
+
+                 if (target.classList.contains('view-pack-button')) {
+                     if (typeof window.showSection === 'function') window.showSection('pack-detail-section');
+                     if (typeof window.renderPackDetail === 'function') window.renderPackDetail(packId);
+                 } else if (target.classList.contains('delete-button')) {
+                    // This will be updated to call window.packService.deletePack
+                    // For now, body is commented out.
+                    // if (typeof window.deletePack === 'function') window.deletePack(packId); // Old call
+                    console.log("Delete pack button clicked - functionality moved to packService.");
+                    // Example:
+                    // if (window.packService) window.packService.deletePack(packId, window.confirm);
+                    // if (typeof window.renderAll === 'function') window.renderAll();
+                 }
+             });
+         }
+
+
+         // Event delegation for adding/removing items AND packing on the pack detail page
+         if (packDetailSection) {
+             packDetailSection.addEventListener('click', function(event) {
+                 const target = event.target;
+                 const itemId = target.dataset.itemId; // Get the item ID
+
+                 if (target.classList.contains('add-to-pack-button') && window.currentManagingPackId) {
+                    // This will be updated to call window.packService.addItemToPack
+                    // For now, body is commented out.
+                    // if (typeof window.addItemToPack === 'function') window.addItemToPack(itemId, window.currentManagingPackId); // Old call
+                    console.log("Add to pack button clicked - functionality moved to packService.");
+                 } else if (target.classList.contains('remove-from-pack-button') && window.currentManagingPackId) {
+                    // This will be updated to call window.packService.removeItemFromPack
+                    // For now, body is commented out.
+                    // if (typeof window.removeItemFromPack === 'function') window.removeItemFromPack(itemId, window.currentManagingPackId); // Old call
+                    console.log("Remove from pack button clicked - functionality moved to packService.");
+                 } else if (target.classList.contains('pack-item-packed-button')) {
+                     if (typeof window.togglePackItemPackedOnDetailPage === 'function') window.togglePackItemPackedOnDetailPage(itemId); // This can stay if it only modifies item.packed and calls render/save
+                 }
+             });
+         }
+
+
+         // Event listener for the "Tout Déballer" button
+         if (unpackAllButton) {
+             unpackAllButton.addEventListener('click', () => {
+                // This will be updated to call window.packService.unpackAllInCurrentPack
+                // For now, body is commented out.
+                // if(typeof window.unpackAllInCurrentPack === 'function') window.unpackAllInCurrentPack(); // Old call
+                console.log("Unpack all button clicked - functionality moved to packService.");
+             });
+         }
+
+
+         // Event listener for the view filter select
+         if (viewFilterSelect) viewFilterSelect.addEventListener('change', window.renderListByView);
+
+         // Event listener for checkboxes within the pack packing modal (event delegation)
+         if (packPackingListElement) {
+             packPackingListElement.addEventListener('change', function(event) {
+                 const target = event.target;
+                 if (target.type === 'checkbox') {
+                     const itemId = target.dataset.itemId;
+                     if (typeof window.togglePackItemPacked === 'function') window.togglePackItemPacked(itemId);
+                 }
+             });
+         }
+
+
+
+         // Event listener to close the packing modal
+         if (closePackingModalButton) {
+             closePackingModalButton.addEventListener('click', function() {
+                 if (packPackingModal) packPackingModal.classList.add('hidden'); // Hide the modal
+                 if (typeof window.renderAll === 'function') window.renderAll(); // Re-render main view to update pack progress bars and weights
+             });
+         }
+
+
+         // Close packing modal if clicking outside (optional)
+         if (packPackingModal) {
+             packPackingModal.addEventListener('click', function(event) {
+                 if (event.target === packPackingModal) {
+                     packPackingModal.classList.add('hidden');
+                     if (typeof window.renderAll === 'function') window.renderAll(); // Re-render main view
+                 }
+             });
+         }
+
+
+        // Event listener for the Save Item button in the edit modal
+        if (saveItemButton) {
+            saveItemButton.addEventListener('click', () => {
+                // This will be updated to call window.itemService.saveEditedItem
+                // For now, body is commented out.
+                // if (typeof window.saveEditedItem === 'function') window.saveEditedItem(); // Old call
+                console.log("Save item button clicked - functionality moved to itemService.");
+                // Example of how it might be called:
+                // const itemId = editingItemIdInput.value;
+                // ... gather updatedData ...
+                // if (window.itemService) window.itemService.saveEditedItem(itemId, updatedData);
+                // if (typeof window.closeEditModal === 'function') window.closeEditModal();
+                // if (typeof window.renderAll === 'function') window.renderAll();
+            });
+        }
+        if (suggestEditItemDetailsButton && editItemNameInput && editItemBrandInput) {
+            suggestEditItemDetailsButton.addEventListener('click', () => {
+                // This will be updated to call window.apiService.suggestItemDetails
+                // For now, body is commented out.
+                // window.suggestItemDetails(editItemNameInput.value, editItemBrandInput.value, 'edit')
+                console.log("Suggest edit item details button clicked - functionality moved to apiService.");
+            });
+        }
+
+
+
+        // Event listener to close the edit item modal
+        if (closeEditModalButton) closeEditModalButton.addEventListener('click', window.closeEditModal);
+
+         // Close edit modal if clicking outside (optional)
+         if (editItemModal) {
+             editItemModal.addEventListener('click', function(event) {
+                 if (event.target === editItemModal) {
+                     if (typeof window.closeEditModal === 'function') window.closeEditModal();
+                 }
+             });
+         }
+
+
+         // Event delegation for category headers and delete buttons in category management section
+         if (categoryManagementListElement) {
+             categoryManagementListElement.addEventListener('click', function(event) {
+                 const target = event.target;
+
+                 // Handle category header click to toggle visibility
+                 const categoryHeaderTarget = target.closest('.category-header');
+                 if (categoryHeaderTarget) {
+                     const categoryContent = categoryHeaderTarget.nextElementSibling; // Get the next element (the content UL)
+                     const chevronIcon = categoryHeaderTarget.querySelector('.fas'); // Get the chevron icon
+
+                     if (categoryContent && categoryContent.classList.contains('category-content')) {
+                         categoryContent.classList.toggle('is-visible');
+                         if (chevronIcon) {
+                            chevronIcon.classList.toggle('fa-chevron-down');
+                            chevronIcon.classList.toggle('fa-chevron-up');
+                         }
+                     }
+                 }
+
+                 // Handle delete button click for a category
+                 if (target.classList.contains('delete-button') && target.dataset.categoryName) {
+                     const categoryToDelete = target.dataset.categoryName;
+                    // This will be updated to call window.categoryService.deleteCategory
+                    // For now, body is commented out.
+                    // if (typeof window.deleteCategory === 'function') window.deleteCategory(categoryToDelete); // Old call
+                    console.log("Delete category button clicked - functionality moved to categoryService.");
+                    // Example:
+                    // if (window.categoryService) window.categoryService.deleteCategory(categoryToDelete, window.confirm);
+                    // if (typeof window.renderAll === 'function') window.renderAll();
+                 }
+
+                 // Event delegation for item actions (edit) within the category management section
+                 if (target.classList.contains('edit-button')) {
+                     const itemId = target.dataset.itemId;
+                     if (typeof window.openEditModal === 'function') window.openEditModal(itemId); // openEditModal remains for now
+                 }
+             });
+         }
+
+
+
+         // Event listeners for sidebar navigation links
+         if (sidebarLinks) {
+             sidebarLinks.forEach(link => {
+                 link.addEventListener('click', function(event) {
+                     event.preventDefault(); // Prevent default link behavior
+                     const sectionId = this.dataset.section + '-section'; // Get target section ID
+                     console.log('Sidebar link clicked, target sectionId:', sectionId); // Debug log
+                     if (typeof window.showSection === 'function') window.showSection(sectionId); // Show the selected section
+                 });
+             });
+         }
+
+
+
+        // Initial data load and rendering will be handled differently, likely by an init function
+        // if (typeof window.loadData === 'function') window.loadData(); // This call is removed/commented
+
+        // Show the default section on load (Inventory)
+        // if (typeof window.showSection === 'function') window.showSection('inventory-section'); // This might also move to an init
+
+
+        if (typeof module !== 'undefined' && module.exports) {
+            module.exports = {
+                items: typeof window !== 'undefined' ? window.items : undefined, // items will be managed by itemService
+                packs: typeof window !== 'undefined' ? window.packs : undefined, // packs will be managed by packService
+                categories: typeof window !== 'undefined' ? window.categories : undefined, // categories will be managed by categoryService
+                // addItem, deleteItem, saveEditedItem are in itemService
+                // addPack, deletePack, addItemToPack, removeItemFromPack, unpackAllInCurrentPack are in packService
+                // addCategory, deleteCategory are in categoryService
+                // loadData is now in persistenceService
+                // saveData is now in persistenceService
+                // API functions are in apiService.js
+                renderAll: typeof window !== 'undefined' ? window.renderAll : undefined,
+                showSection: typeof window !== 'undefined' ? window.showSection : undefined,
+                openEditModal: typeof window !== 'undefined' ? window.openEditModal : undefined, // UI interaction, might stay or move to a UI service
+            };
+        }
