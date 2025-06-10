@@ -7,14 +7,12 @@
             this.itemService = itemService;
             this.packService = packService;
             this.categoryService = categoryService;
-            this.modalHandler = modalHandler; // To close edit modal after save
-            // UI components to trigger re-render after add/edit.
+            this.modalHandler = modalHandler;
             this.itemDisplay = itemDisplay;
             this.packDisplay = packDisplay;
             this.categoryDisplay = categoryDisplay;
 
-
-            // --- New Item Form Elements ---
+            // New Item Form Elements
             this.newItemNameInput = document.getElementById('item-name');
             this.newItemWeightInput = document.getElementById('item-weight');
             this.newItemBrandInput = document.getElementById('item-brand');
@@ -24,9 +22,9 @@
             this.newItemImageUrlInput = document.getElementById('item-image-url');
             this.newItemConsumableInput = document.getElementById('item-consumable');
             this.addItemButton = document.getElementById('add-item-button');
-            this.newItemImagePreview = document.getElementById('new-item-image-preview'); // Added for clearing
+            this.newItemImagePreview = document.getElementById('new-item-image-preview');
 
-            // --- Edit Item Form Elements (from modal) ---
+            // Edit Item Form Elements
             this.editItemNameInput = document.getElementById('edit-item-name');
             this.editItemWeightInput = document.getElementById('edit-item-weight');
             this.editItemBrandInput = document.getElementById('edit-item-brand');
@@ -37,14 +35,13 @@
             this.editItemConsumableInput = document.getElementById('edit-item-consumable');
             this.saveItemButton = document.getElementById('save-item-button');
             this.editingItemIdInput = document.getElementById('editing-item-id');
-            this.editItemImagePreview = document.getElementById('edit-item-image-preview'); // Added for clearing
+            this.editItemImagePreview = document.getElementById('edit-item-image-preview');
 
-
-            // --- New Pack Form Elements ---
+            // New Pack Form Elements
             this.packNameInput = document.getElementById('pack-name');
             this.addPackButton = document.getElementById('add-pack-button');
 
-            // --- New Category Form Elements ---
+            // New Category Form Elements
             this.categoryNameInput = document.getElementById('category-name');
             this.addCategoryButton = document.getElementById('add-category-button');
 
@@ -52,42 +49,34 @@
         }
 
         _setupEventListeners() {
-            // Add Item
             if (this.addItemButton) {
                 this.addItemButton.addEventListener('click', () => this.handleAddItem());
             }
-            // Assuming newItemImageUrlInput is a good representative for the last field for Enter key submission
-            const newItemForm = document.getElementById('new-item-section');
+            const newItemForm = document.getElementById('new-item-section'); // Assuming form or a main div
             if (newItemForm) {
                  newItemForm.addEventListener('keypress', (event) => {
-                    if (event.key === 'Enter' && event.target.form) { // check if inside a form context
-                        // Check if the target is an input field that should trigger submission
-                        if (event.target.tagName === 'INPUT' && event.target.type !== 'checkbox') {
+                    if (event.key === 'Enter' && (event.target.form || event.target.closest('form'))) {
+                        if (event.target.tagName === 'INPUT' && event.target.type !== 'checkbox' && event.target.type !== 'button') {
                            this.handleAddItem();
                         }
                     }
                 });
             }
 
-
-            // Save Edited Item
             if (this.saveItemButton) {
                 this.saveItemButton.addEventListener('click', () => this.handleSaveEditedItem());
             }
-            // Optional: Enter key on last field of edit form
-            const editItemForm = document.getElementById('edit-item-modal')?.querySelector('.modal-content');
-            if (editItemForm) { // editItemModal itself or a form within it
-                 editItemForm.addEventListener('keypress', (event) => {
-                    if (event.key === 'Enter' && event.target.form) {
-                         if (event.target.tagName === 'INPUT' && event.target.type !== 'checkbox') {
+            const editItemModalContent = document.getElementById('edit-item-modal')?.querySelector('.modal-content');
+            if (editItemModalContent) {
+                 editItemModalContent.addEventListener('keypress', (event) => {
+                    if (event.key === 'Enter' && (event.target.form || event.target.closest('form'))) {
+                         if (event.target.tagName === 'INPUT' && event.target.type !== 'checkbox' && event.target.type !== 'button') {
                             this.handleSaveEditedItem();
                          }
                     }
                 });
             }
 
-
-            // Add Pack
             if (this.addPackButton) {
                 this.addPackButton.addEventListener('click', () => this.handleAddPack());
             }
@@ -97,7 +86,6 @@
                 });
             }
 
-            // Add Category
             if (this.addCategoryButton) {
                 this.addCategoryButton.addEventListener('click', () => this.handleAddCategory());
             }
@@ -113,13 +101,13 @@
             const weight = parseFloat(this.newItemWeightInput.value);
             const brand = this.newItemBrandInput.value.trim();
             const category = this.newItemCategorySelect.value;
-            const tags = this.newItemTagsInput.value.split(',').map(tag => tag.trim()).filter(tag => tag); // Service expects array
+            const tags = this.newItemTagsInput.value.split(',').map(tag => tag.trim()).filter(tag => tag);
             const capacity = this.newItemCapacityInput.value.trim();
             const imageUrl = this.newItemImageUrlInput.value.trim();
             const isConsumable = this.newItemConsumableInput.checked;
 
             if (!name || isNaN(weight) || weight <= 0) {
-                alert('Veuillez entrer un nom et un poids valide pour l\'item.');
+                alert("Veuillez entrer un nom et un poids valide pour l'item."); // Changed quotes
                 return;
             }
 
@@ -141,76 +129,78 @@
                 }
                 this.newItemNameInput.focus();
             } else {
-                alert('Erreur lors de l'ajout de l'item.');
+                alert("Erreur lors de l'ajout de l'item."); // Changed quotes
             }
         }
 
         handleSaveEditedItem() {
             const itemId = this.editingItemIdInput.value;
-            if (!itemId) return;
+            if (!itemId) {
+                console.error("handleSaveEditedItem: No item ID found for saving.");
+                return;
+            }
 
             const name = this.editItemNameInput.value.trim();
             const weight = parseFloat(this.editItemWeightInput.value);
             const brand = this.editItemBrandInput.value.trim();
             const category = this.editItemCategorySelect.value;
-            const tags = this.editItemTagsInput.value.split(',').map(tag => tag.trim()).filter(tag => tag); // Service expects array
+            const tags = this.editItemTagsInput.value.split(',').map(tag => tag.trim()).filter(tag => tag);
             const capacity = this.editItemCapacityInput.value.trim();
             const imageUrl = this.editItemImageUrlInput.value.trim();
             const isConsumable = this.editItemConsumableInput.checked;
 
             if (!name || isNaN(weight) || weight <= 0) {
-                alert('Veuillez entrer un nom et un poids valide pour l\'item.');
+                alert("Veuillez entrer un nom et un poids valide pour l'item."); // Changed quotes
                 return;
             }
             const itemDataToSave = { name, weight, brand, category, tags, capacity, imageUrl, isConsumable };
-            const success = this.itemService.saveEditedItem(itemId, itemDataToSave);
+            const savedItem = this.itemService.saveEditedItem(itemId, itemDataToSave);
 
-            if (success) {
+            if (savedItem) {
                 if (this.modalHandler) this.modalHandler.closeEditModal();
                 if (global.renderAll) global.renderAll();
             } else {
-                alert('Erreur lors de la sauvegarde de l'item.');
+                alert("Erreur lors de la sauvegarde de l'item."); // Changed quotes
             }
         }
 
         handleAddPack() {
             const packName = this.packNameInput.value.trim();
             if (!packName) {
-                alert('Veuillez entrer le nom du pack.');
+                alert("Veuillez entrer le nom du pack."); // Changed quotes
                 return;
             }
             const newPack = this.packService.addPack(packName);
             if (newPack) {
                 if(this.packDisplay && typeof this.packDisplay.renderPacks === 'function') {
                      this.packDisplay.renderPacks();
-                } else if (global.packDisplay && typeof global.packDisplay.renderPacks === 'function') { // Fallback if not passed in constructor
+                } else if (global.packDisplay && typeof global.packDisplay.renderPacks === 'function') {
                     global.packDisplay.renderPacks();
                 }
                 if(global.updateViewFilterOptions) global.updateViewFilterOptions();
                 this.packNameInput.value = '';
             } else {
-                // Alert is handled by packService for duplicate names
+                // Alert for existing pack name is handled by packService
             }
         }
 
         handleAddCategory() {
             const categoryName = this.categoryNameInput.value.trim();
             if (!categoryName) {
-                alert('Veuillez entrer le nom de la catégorie.');
+                alert("Veuillez entrer le nom de la catégorie."); // Changed quotes
                 return;
             }
             const newCategory = this.categoryService.addCategory(categoryName);
             if (newCategory) {
                  if (this.categoryDisplay && typeof this.categoryDisplay.renderCategoryManagement === 'function') {
                     this.categoryDisplay.renderCategoryManagement();
-                } else if (global.categoryDisplay && typeof global.categoryDisplay.renderCategoryManagement === 'function') { // Fallback
+                } else if (global.categoryDisplay && typeof global.categoryDisplay.renderCategoryManagement === 'function') {
                     global.categoryDisplay.renderCategoryManagement();
                 }
                 if(global.updateCategoryDropdowns) global.updateCategoryDropdowns();
-
                 this.categoryNameInput.value = '';
             } else {
-                // Alert is handled by categoryService for duplicate or empty names
+                // Alert for existing or empty category name is handled by categoryService
             }
         }
     }
