@@ -1,25 +1,24 @@
 // services/categoryService.js
 (function(global) {
     "use strict";
-    // console.log('Executing categoryService.js');
+    const Category = (global.appModels && global.appModels.Category) ? global.appModels.Category : class DefaultCategory { constructor(data) { Object.assign(this, data); } };
+
     let categories = []; // Internal state
 
     const persistence = global.persistenceService || {
-        saveData: () => {
-            // console.warn("CategoryService: persistenceService.saveData not found. This is a mock stub.");
-        }
+        saveData: () => {}
     };
 
     global.categoryService = {
         setCategories: function(newCategories) {
-            categories = newCategories ? JSON.parse(JSON.stringify(newCategories)) : []; // Deep copy
+            categories = newCategories ? newCategories.map(catData => catData instanceof Category ? catData : new Category(catData)) : [];
         },
         getCategories: function() {
-            return JSON.parse(JSON.stringify(categories)); // Deep copy
+            return categories.map(cat => new Category(cat)); // Return new instances
         },
         getCategoryByName: function(categoryName) {
             const category = categories.find(cat => cat.name.toLowerCase() === categoryName.toLowerCase());
-            return category ? JSON.parse(JSON.stringify(category)) : undefined;
+            return category ? new Category(category) : undefined; // Return a new instance
         },
 
         addCategory: function(categoryName) {
@@ -34,13 +33,14 @@
                 else console.error(`CategoryService: Category "${trimmedName}" already exists.`);
                 return null;
             }
-            const newCategory = { name: trimmedName };
+            const newCategory = new Category({ name: trimmedName });
             categories.push(newCategory);
 
-            const currentItems = (global.window && global.window.items) ? global.window.items : [];
-            const currentPacks = (global.window && global.window.packs) ? global.window.packs : [];
-            persistence.saveData(currentItems, currentPacks, categories);
-            return JSON.parse(JSON.stringify(newCategory)); // Return a copy
+            const plainCategories = categories.map(cat => ({...cat}));
+            const currentItems = (global.itemService) ? global.itemService.getItems().map(i => ({...i})) : [];
+            const currentPacks = (global.packService) ? global.packService.getPacks().map(p => ({...p})) : [];
+            persistence.saveData(currentItems, currentPacks, plainCategories);
+            return new Category(newCategory); // Return a new instance
         },
 
         deleteCategory: function(categoryName, confirmFunc) {

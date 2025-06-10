@@ -86,197 +86,12 @@
         // saveData function is now in persistenceService.js
         // loadData function is now in persistenceService.js
 
-        // Function to render the pack list and update the pack select dropdowns
-        window.renderPacks = function renderPacks() {
-            if (!packListElement) return; // Guard against missing element
-            packListElement.innerHTML = '';
-
-            const currentPacks = window.packService.getPacks();
-            const currentItems = window.itemService.getItems();
-
-            if (currentPacks.length === 0) {
-                packListElement.innerHTML = '<li class="text-center text-gray-500">Aucun pack créé.</li>';
-            } else {
-                 currentPacks.forEach(pack => {
-                    // Calculate weight for items whose packIds array includes this pack's ID
-                    const packItems = currentItems.filter(item => item.packIds && item.packIds.includes(pack.id));
-                    const packWeight = packItems.reduce((sum, item) => sum + (parseFloat(item.weight) || 0), 0);
-                    const packedWeight = packItems.filter(item => item.packed).reduce((sum, item) => sum + (parseFloat(item.weight) || 0), 0); // Calculate packed weight
-                    const packProgress = packWeight > 0 ? (packedWeight / packWeight) * 100 : 0; // Progress based on weight
-
-                    const listItem = document.createElement('li');
-                    listItem.classList.add('pack-item');
-                     // Add 'packed' class if all items in pack are packed (based on weight)
-                     if (packWeight > 0 && packedWeight === packWeight) {
-                         listItem.classList.add('packed');
-                     }
-                     listItem.innerHTML = `
-                        <div class="weight-bar" style="width: ${packProgress}%;"></div>
-                        <div class="pack-details">
-                            <span class="pack-name">${pack.name}</span>
-                            <span class="pack-weight">(${packWeight} g)</span>
-                             <span class="ml-2 text-sm text-gray-600">${packedWeight} g / ${packWeight} g emballés</span>
-                        </div>
-                        <div class="pack-actions">
-                             <button class="view-pack-button" data-pack-id="${pack.id}">Gérer</button> <button class="delete-button" data-pack-id="${pack.id}">Supprimer</button>
-                        </div>
-                    `;
-                    packListElement.appendChild(listItem);
-
-                    // Pack select dropdowns are now handled differently on the pack detail page
-                });
-            }
-
-             // Add pack view options to the filter select
-             if (typeof window.updateViewFilterOptions === 'function') window.updateViewFilterOptions();
-        }
+        // MOVED to ui/packDisplay.js: window.renderPacks
 
         // Function to render the item list based on the current view
-        window.renderItems = function renderItems(providedItems) {
-            if (!itemListElement || !totalWeightElement || !inventoryWeightElement) return; // Guard
-            itemListElement.innerHTML = ''; // Clear current list
-
-            const itemsToRender = providedItems || window.itemService.getItems();
-            const allItemsForTotalWeight = window.itemService.getItems();
-            let totalWeight = 0;
-
-            if (itemsToRender.length === 0) {
-                itemListElement.innerHTML = '<li class="text-center text-gray-500">Aucun item à afficher.</li>';
-            } else {
-                 itemsToRender.forEach((item, index) => {
-                    const listItem = document.createElement('li');
-                    listItem.classList.add('item');
-                    if (item.packed) {
-                        listItem.classList.add('packed');
-                    }
-
-                    // Calculate item weight percentage for the bar graph (relative to total weight)
-                    const itemWeight = parseFloat(item.weight) || 0;
-                    const overallTotalWeight = allItemsForTotalWeight.reduce((sum, i) => sum + (parseFloat(i.weight) || 0), 0);
-                    // For individual items, the bar represents their weight relative to the total inventory weight
-                    const weightPercentage = overallTotalWeight > 0 ? (itemWeight / overallTotalWeight) * 100 : 0;
-
-
-                    listItem.innerHTML = `
-                        <div class="weight-bar" style="width: ${weightPercentage}%;"></div>
-                        <div class="item-details">
-                            <img src="${item.imageUrl || 'https://placehold.co/50x50/eeeeee/aaaaaa?text=No+Img'}"
-                                 onerror="this.onerror=null;this.src='https://placehold.co/50x50/eeeeee/aaaaaa?text=No+Img';"
-                                 alt="Image de ${item.name}"
-                                 class="w-12 h-12 rounded-full object-cover mr-4 border border-gray-300">
-                            <span class="item-name">${item.name}</span>
-                            <span class="item-weight">(${item.weight} g)</span>
-                            ${item.brand ? `<span class="item-brand">| ${item.brand}</span>` : ''}
-                            ${item.category ? `<span class="item-category">| ${item.category}</span>` : ''}
-                            ${item.tags && item.tags.length > 0 ? `<span class="item-tags">| Tags: ${item.tags.join(', ')}</span>` : ''}
-                             ${item.capacity ? `<span class="item-capacity">| Capacité: ${item.capacity}</span>` : ''}
-                             ${item.isConsumable ? `<span class="item-consumable">| Consommable</span>` : ''}
-                        </div>
-                        <div class="item-actions">
-                             <button class="edit-button" data-item-id="${item.id}">Modifier</button>
-                            </div>
-                    `;
-                    // Removed pack/unpack button from inventory view
-
-
-                    itemListElement.appendChild(listItem);
-
-                    // Add weight to total if it's a valid number
-                    // This totalWeight is for the displayed items, not necessarily all items in inventory
-                    totalWeight += itemWeight;
-                });
-            }
-
-            // Update total weight display based on ALL items in inventory for consistency
-            const allItemsWeight = allItemsForTotalWeight.reduce((sum, i) => sum + (parseFloat(i.weight) || 0), 0);
-            totalWeightElement.textContent = `Poids Total Inventaire: ${allItemsWeight} g`;
-            // Update inventory weight in sidebar
-            inventoryWeightElement.textContent = `(${allItemsWeight} g)`;
-
-            // Removed persistenceService.saveData()
-        }
-
-        // Function to render items grouped by category (used in Inventory view filter)
-        window.renderCategories = function renderCategories() {
-             if (!itemListElement || !totalWeightElement || !inventoryWeightElement) return; // Guard
-             itemListElement.innerHTML = ''; // Clear current list
-
-             const currentItems = window.itemService.getItems();
-             // Get unique categories with items, including items with no category
-             const categoriesWithItems = [...new Set(currentItems.map(item => item.category || 'Sans catégorie'))];
-
-             if (categoriesWithItems.length === 0) {
-                 itemListElement.innerHTML = '<li class="text-center text-gray-500">Aucune catégorie avec des items.</li>';
-             } else {
-                 categoriesWithItems.forEach(category => {
-                    const itemsInCategory = currentItems.filter(item => (item.category || 'Sans catégorie') === category);
-                    const categoryWeight = itemsInCategory.reduce((sum, item) => sum + (parseFloat(item.weight) || 0), 0);
-                    const packedWeightInCategory = itemsInCategory.filter(item => item.packed).reduce((sum, item) => sum + (parseFloat(item.weight) || 0), 0); // Calculate packed weight in category
-                     const categoryProgress = categoryWeight > 0 ? (packedWeightInCategory / categoryWeight) * 100 : 0; // Progress based on weight
-
-
-                    const categoryHeader = document.createElement('li');
-                    categoryHeader.classList.add('category-item', 'font-bold', 'mt-4');
-                     // Add 'packed' class if all items in category are packed (based on weight)
-                     if (categoryWeight > 0 && packedWeightInCategory === categoryWeight) {
-                         categoryHeader.classList.add('packed');
-                     }
-                     categoryHeader.innerHTML = `
-                        <div class="weight-bar" style="width: ${categoryProgress}%;"></div>
-                         <div class="category-details">
-                            <span class="category-name">${category}</span>
-                            <span class="category-weight">(${categoryWeight} g)</span>
-                            <span class="ml-2 text-sm text-gray-600">${packedWeightInCategory} g / ${categoryWeight} g emballés</span>
-                         </div>
-                         <div class="category-actions">
-                             </div>
-                     `;
-                    itemListElement.appendChild(categoryHeader);
-
-                    // Render items within this category
-                    itemsInCategory.forEach(item => {
-                         const listItem = document.createElement('li');
-                         listItem.classList.add('item', 'ml-4'); // Indent items
-                         if (item.packed) {
-                             listItem.classList.add('packed');
-                         }
-
-                        // For items within a category view, the bar represents their weight relative to the category weight
-                        const itemWeight = parseFloat(item.weight) || 0;
-                        const weightPercentage = categoryWeight > 0 ? (itemWeight / categoryWeight) * 100 : 0;
-
-                         listItem.innerHTML = `
-                             <div class="weight-bar" style="width: ${weightPercentage}%;"></div>
-                             <div class="item-details">
-                                 <img src="${item.imageUrl || 'https://placehold.co/50x50/eeeeee/aaaaaa?text=No+Img'}"
-                                      onerror="this.onerror=null;this.src='https://placehold.co/50x50/eeeeee/aaaaaa?text=No+Img';"
-                                      alt="Image de ${item.name}"
-                                      class="w-12 h-12 rounded-full object-cover mr-4 border border-gray-300">
-                                 <span class="item-name">${item.name}</span>
-                                 <span class="item-weight">(${item.weight} g)</span>
-                                 ${item.brand ? `<span class="item-brand">| ${item.brand}</span>` : ''}
-                                 ${item.category ? `<span class="item-category">| ${item.category}</span>` : ''}
-                                 ${item.tags && item.tags.length > 0 ? `<span class="item-tags">| Tags: ${item.tags.join(', ')}</span>` : ''}
-                                  ${item.capacity ? `<span class="item-capacity">| Capacité: ${item.capacity}</span>` : ''}
-                                  ${item.isConsumable ? `<span class="item-consumable">| Consommable</span>` : ''}
-                             </div>
-                             <div class="item-actions">
-                                  <button class="edit-button" data-item-id="${item.id}">Modifier</button>
-                                 </div>
-                         `;
-                         // Removed pack/unpack button from category view
-                         itemListElement.appendChild(listItem);
-                    });
-                 });
-             }
-
-             // Update total weight display (still show total backpack weight)
-             const totalInventoryWeight = currentItems.reduce((sum, item) => sum + (parseFloat(item.weight) || 0), 0);
-             totalWeightElement.textContent = `Poids Total Inventaire: ${totalInventoryWeight} g`;
-             inventoryWeightElement.textContent = `(${totalInventoryWeight} g)`;
-
-            // Removed persistenceService.saveData()
-        }
+        // MOVED to ui/itemDisplay.js: window.renderItems
+        // MOVED to ui/itemDisplay.js: window.renderCategories (inventory list version)
+        // MOVED to ui/itemDisplay.js: window.renderListByView
 
         // Function to render the category management list (explicitly created categories)
         window.renderCategoryManagement = function renderCategoryManagement() {
@@ -382,189 +197,8 @@
         }
 
 
-        // Function to render items within a specific pack for packing view
-        window.renderPackPacking = function renderPackPacking(packId) {
-            if (!packPackingModal || !packingPackNameElement || !packPackingListElement) return; // Guard
-            const pack = window.packService.getPackById(packId);
-            if (!pack) {
-                console.error(`Pack with ID ${packId} not found for packing modal.`);
-                // Optionally hide modal or show error message
-                return;
-            }
-
-            packingPackNameElement.textContent = `Emballage du Pack : ${pack.name}`;
-            packPackingListElement.innerHTML = '';
-
-            const currentItems = window.itemService.getItems();
-            // Filter items that belong to this pack
-            const itemsInPack = currentItems.filter(item => item.packIds && item.packIds.includes(packId));
-
-
-            if (itemsInPack.length === 0) {
-                 packPackingListElement.innerHTML = '<li class="text-center text-gray-500">Ce pack est vide.</li>';
-            } else {
-                 itemsInPack.forEach(item => {
-                    const listItem = document.createElement('li');
-                    listItem.classList.add('pack-packing-item');
-                    listItem.innerHTML = `
-                        <span class="item-name">${item.name} (${item.weight} g)</span>
-                        <input type="checkbox" data-item-id="${item.id}" ${item.packed ? 'checked' : ''}>
-                    `;
-                    packPackingListElement.appendChild(listItem);
-                 });
-            }
-            // Removed persistenceService.saveData()
-
-            packPackingModal.classList.remove('hidden'); // Show the modal
-        }
-
-        // Function to render the pack detail view
-        window.renderPackDetail = function renderPackDetail(packId) {
-             if (!packDetailTitle || !itemsInPackList || !availableItemsList) return; // Guard
-             window.currentManagingPackId = packId; // Set the currently managed pack ID
-             const pack = window.packService.getPackById(packId);
-
-             if (!pack) {
-                 console.error(`Pack with ID ${packId} not found for detail view.`);
-                 // If pack not found, maybe show pack list again or an error
-                 if (typeof window.showSection === 'function') window.showSection('manage-packs-section');
-                 return;
-             }
-
-             packDetailTitle.textContent = `Détails du Pack : ${pack.name}`;
-             itemsInPackList.innerHTML = '';
-             availableItemsList.innerHTML = '';
-
-             const currentItems = window.itemService.getItems();
-             const itemsInThisPack = currentItems.filter(item => item.packIds && item.packIds.includes(packId));
-             const availableItemsData = currentItems.filter(item => !item.packIds || !item.packIds.includes(packId));
-
-
-             const packTotalWeight = itemsInThisPack.reduce((sum, item) => sum + (parseFloat(item.weight) || 0), 0);
-             const totalInventoryWeight = currentItems.reduce((sum, item) => sum + (parseFloat(item.weight) || 0), 0);
-
-
-             if (itemsInThisPack.length === 0) {
-                 itemsInPackList.innerHTML = '<li class="text-center text-gray-500">Aucun item dans ce pack.</li>';
-             } else {
-                 itemsInThisPack.forEach(item => {
-                     const listItem = document.createElement('li');
-                     listItem.classList.add('pack-detail-item');
-                      if (item.packed) {
-                         listItem.classList.add('packed');
-                     }
-
-                     // Bar represents weight relative to pack total weight
-                     const itemWeight = parseFloat(item.weight) || 0;
-                     const weightPercentage = packTotalWeight > 0 ? (itemWeight / packTotalWeight) * 100 : 0;
-
-
-                     listItem.innerHTML = `
-                         <div class="weight-bar" style="width: ${weightPercentage}%;"></div>
-                         <img src="${item.imageUrl || 'https://placehold.co/50x50/eeeeee/aaaaaa?text=No+Img'}"
-                              onerror="this.onerror=null;this.src='https://placehold.co/50x50/eeeeee/aaaaaa?text=No+Img';"
-                              alt="Image de ${item.name}"
-                              class="w-10 h-10 rounded-full object-cover mr-2 border border-gray-300">
-                         <span class="pack-detail-item-name">${item.name} (${item.weight} g)</span>
-                         <div class="pack-detail-actions">
-                              <button class="pack-item-packed-button" data-item-id="${item.id}">${item.packed ? 'Déballer' : 'Emballer'}</button> <button class="remove-from-pack-button" data-item-id="${item.id}">Retirer</button>
-                         </div>
-                     `;
-                     itemsInPackList.appendChild(listItem);
-                 });
-             }
-
-             if (availableItemsData.length === 0) {
-                 availableItemsList.innerHTML = '<li class="text-center text-gray-500">Aucun item disponible à ajouter.</li>';
-             } else {
-                 availableItemsData.forEach(item => {
-                     const listItem = document.createElement('li');
-                     listItem.classList.add('pack-detail-item');
-
-                     // Bar represents weight relative to total inventory weight
-                     const itemWeight = parseFloat(item.weight) || 0;
-                     const weightPercentage = totalInventoryWeight > 0 ? (itemWeight / totalInventoryWeight) * 100 : 0;
-
-
-                     listItem.innerHTML = `
-                         <div class="weight-bar" style="width: ${weightPercentage}%;"></div>
-                         <img src="${item.imageUrl || 'https://placehold.co/50x50/eeeeee/aaaaaa?text=No+Img'}"
-                              onerror="this.onerror=null;this.src='https://placehold.co/50x50/eeeeee/aaaaaa?text=No+Img';"
-                              alt="Image de ${item.name}"
-                              class="w-10 h-10 rounded-full object-cover mr-2 border border-gray-300">
-                         <span class="pack-detail-item-name">${item.name} (${item.weight} g)</span>
-                         <div class="pack-detail-actions">
-                             <button class="add-to-pack-button" data-item-id="${item.id}">Ajeter</button>
-                         </div>
-                     `;
-                     availableItemsList.appendChild(listItem);
-                 });
-             }
-
-             // Removed persistenceService.saveData()
-        }
-
-        // Function to render the list based on the current view filter
-        window.renderListByView = function renderListByView() {
-             if (!viewFilterSelect || !itemListElement || !totalWeightElement || !inventoryWeightElement) return; // Guard
-             const selectedView = viewFilterSelect.value;
-             window.currentView = selectedView; // Update current view state
-             const currentItems = window.itemService.getItems();
-
-             if (selectedView === 'all') {
-                 if (typeof window.renderItems === 'function') window.renderItems(currentItems); // Render all items
-             } else if (selectedView === 'categories') {
-                 if (typeof window.renderCategories === 'function') window.renderCategories(); // Render grouped by category
-             } else if (selectedView.startsWith('pack-')) {
-                 const packId = selectedView.substring(5); // Extract pack ID
-                 const itemsInPack = currentItems.filter(item => item.packIds && item.packIds.includes(packId));
-                 // For pack view, render items within that pack, and the bar represents their weight relative to the pack's total weight
-                 const packTotalWeight = itemsInPack.reduce((sum, item) => sum + (parseFloat(item.weight) || 0), 0);
-                 itemListElement.innerHTML = ''; // Clear current list
-                 if (itemsInPack.length === 0) {
-                      itemListElement.innerHTML = '<li class="text-center text-gray-500">Ce pack est vide.</li>';
-                 } else {
-                      itemsInPack.forEach(item => {
-                         const listItem = document.createElement('li');
-                         listItem.classList.add('item');
-                         if (item.packed) {
-                             listItem.classList.add('packed');
-                         }
-
-                         const itemWeight = parseFloat(item.weight) || 0;
-                         const weightPercentage = packTotalWeight > 0 ? (itemWeight / packTotalWeight) * 100 : 0;
-
-                          listItem.innerHTML = `
-                             <div class="weight-bar" style="width: ${weightPercentage}%;"></div>
-                             <div class="item-details">
-                                 <img src="${item.imageUrl || 'https://placehold.co/50x50/eeeeee/aaaaaa?text=No+Img'}"
-                                      onerror="this.onerror=null;this.src='https://placehold.co/50x50/eeeeee/aaaaaa?text=No+Img';"
-                                      alt="Image de ${item.name}"
-                                      class="w-12 h-12 rounded-full object-cover mr-4 border border-gray-300">
-                                 <span class="item-name">${item.name}</span>
-                                 <span class="item-weight">(${item.weight} g)</span>
-                                 ${item.brand ? `<span class="item-brand">| ${item.brand}</span>` : ''}
-                                 ${item.category ? `<span class="item-category">| ${item.category}</span>` : ''}
-                                 ${item.tags && item.tags.length > 0 ? `<span class="item-tags">| Tags: ${item.tags.join(', ')}</span>` : ''}
-                                  ${item.capacity ? `<span class="item-capacity">| Capacité: ${item.capacity}</span>` : ''}
-                                  ${item.isConsumable ? `<span class="item-consumable">| Consommable</span>` : ''}
-                             </div>
-                             <div class="item-actions">
-                                  <button class="edit-button" data-item-id="${item.id}">Modifier</button>
-                                 </div>
-                         `;
-                         // Removed pack/unpack button from pack view in inventory section
-                         itemListElement.appendChild(listItem);
-                      });
-                 }
-
-                 // Update total weight display (still show total backpack weight)
-                 const totalInvWeight = currentItems.reduce((sum, item) => sum + (parseFloat(item.weight) || 0), 0);
-                 totalWeightElement.textContent = `Poids Total Inventaire: ${totalInvWeight} g`;
-                 inventoryWeightElement.textContent = `(${totalInvWeight} g)`;
-                 // Removed persistenceService.saveData()
-             }
-        }
+        // MOVED to ui/packDisplay.js: window.renderPackPacking
+        // MOVED to ui/packDisplay.js: window.renderPackDetail
 
         // Function to update the view filter options (add packs)
         window.updateViewFilterOptions = function updateViewFilterOptions() {
@@ -594,10 +228,16 @@
 
         // Function to render everything (packs, items based on current view, categories management)
         window.renderAll = function renderAll() {
-            if (typeof window.renderPacks === 'function') window.renderPacks(); // Render packs list and update dropdown/filter
-            if (typeof window.renderListByView === 'function') window.renderListByView(); // Render items/categories/pack view in Inventory section
-            if (typeof window.renderCategoryManagement === 'function') window.renderCategoryManagement(); // Render category management list
-            if (typeof window.updateCategoryDropdowns === 'function') window.updateCategoryDropdowns(); // Update category dropdowns in forms
+            // if (typeof window.renderPacks === 'function') window.renderPacks(); // Now handled by packDisplay instance
+            if (window.packDisplay && typeof window.packDisplay.renderPacks === 'function') {
+                window.packDisplay.renderPacks();
+            }
+            // if (typeof window.renderListByView === 'function') window.renderListByView(); // Now handled by itemDisplay instance
+            if (window.itemDisplay && typeof window.itemDisplay.renderListByView === 'function') {
+                window.itemDisplay.renderListByView();
+            }
+            if (typeof window.renderCategoryManagement === 'function') window.renderCategoryManagement();
+            if (typeof window.updateCategoryDropdowns === 'function') window.updateCategoryDropdowns();
         }
 
         // addItem, deleteItem, saveEditedItem functions are moved to itemService.js
@@ -618,152 +258,28 @@
             }
         }
 
-        // Function to toggle packed status for an item within the packing modal
-         window.togglePackItemPacked = function togglePackItemPacked(itemId) {
-            const item = window.itemService.getItemById(itemId);
-            if (item) {
-                const updatedItem = { ...item, packed: !item.packed };
-                // No full renderAll, modal UI updates are specific or handled on close.
-                // Service call still needed to persist change.
-                if (!window.itemService.saveEditedItem(itemId, updatedItem)) {
-                     alert("Failed to update item packed status in modal.");
-                }
-            } else {
-                console.error(`Item with ID ${itemId} not found for togglePackItemPacked.`);
-            }
-             // Removed persistenceService.saveData()
-                 // No need to re-render the main list, just update the checkbox state in the modal
-                 // And potentially update the progress bar on the pack list if modal is closed.
-             }
-         }
+        // MOVED to ui/packDisplay.js: _togglePackItemPackedInModal (as internal method)
 
         // Function to show a specific content section and hide others
-        window.showSection = function showSection(sectionId) {
-            if (!contentSections || !sidebarLinks) return; // Guard
-            console.log('showSection called with:', sectionId); // Debug log
-            contentSections.forEach(section => {
-                if (section.id === sectionId) {
-                    section.classList.add('active');
-                    console.log(`Section ${section.id} set to active.`); // Debug log
-                } else {
-                    section.classList.remove('active');
-                }
-            });
+        // This function is now part of NavigationHandler in ui/navigationHandler.js
+        // window.showSection = function showSection(sectionId) { ... }
 
-            // Update active class on sidebar links
-            sidebarLinks.forEach(link => {
-                const linkTargetSectionId = link.dataset.section + '-section'; // Correctly form the ID from data-section
-                console.log(`Checking link: ${link.dataset.section}, target: ${linkTargetSectionId}, current active: ${sectionId}`); // Debug log
 
-                if (linkTargetSectionId === sectionId ||
-                    (link.dataset.section === 'manage-packs' && sectionId === 'pack-detail-section')
-                ) {
-                     link.classList.add('active');
-                } else {
-                    link.classList.remove('active');
-                }
-            });
-
-             // Perform specific rendering based on the section shown
-             if (sectionId === 'inventory-section') {
-                 if (typeof window.renderListByView === 'function') window.renderListByView();
-             } else if (sectionId === 'new-item-section') {
-                 if (typeof window.updateCategoryDropdowns === 'function') window.updateCategoryDropdowns(); // Ensure dropdown is populated when showing this section
-                 if (newItemImageUrlInput && newItemImagePreview && typeof window.updateImagePreview === 'function') window.updateImagePreview(newItemImageUrlInput.value, newItemImagePreview); // Update preview when showing new item form
-             } else if (sectionId === 'manage-packs-section') {
-                 if (typeof window.renderPacks === 'function') window.renderPacks(); // Ensure pack list is up-to-date
-             } else if (sectionId === 'pack-detail-section' && window.currentManagingPackId) {
-                 if (typeof window.renderPackDetail === 'function') window.renderPackDetail(window.currentManagingPackId); // Render the details of the currently managed pack
-             } else if (sectionId === 'manage-categories-section') {
-                 if (typeof window.renderCategoryManagement === 'function') window.renderCategoryManagement(); // Render the category management page
-             } else if (sectionId === 'generate-pack-section') {
-                 // Reset the content of the generated items list and ensure message is shown
-                 if (generatedItemsListElement) generatedItemsListElement.innerHTML = '<li class="text-center text-gray-500">Aucune suggestion d\'item générée. Veuillez utiliser le formulaire ci-dessus.</li>';
-                 if (generatedPackResultsDiv) generatedPackResultsDiv.classList.remove('hidden'); // Ensure results div is visible
-             }
-        }
-
-        // Function to open the edit item modal and populate it
-        window.openEditModal = function openEditModal(itemId) {
-            if (!editItemModal || !editItemNameInput || !editingItemIdInput) return; // Guard
-            const itemToEdit = window.itemService.getItemById(itemId);
-            if (!itemToEdit) {
-                console.error(`Item with ID ${itemId} not found for edit modal.`);
-                alert("Error: Item details could not be loaded for editing.");
-                return;
-            }
-
-            // Populate the edit form fields
-            editItemNameInput.value = itemToEdit.name;
-            editItemWeightInput.value = itemToEdit.weight;
-            editItemBrandInput.value = itemToEdit.brand;
-            editItemCategorySelect.value = itemToEdit.category; // Set selected value in select
-            editItemTagsInput.value = itemToEdit.tags ? itemToEdit.tags.join(', ') : ''; // Join tags array for input
-            editItemCapacityInput.value = itemToEdit.capacity;
-            editItemImageUrlInput.value = itemToEdit.imageUrl;
-            editItemConsumableInput.checked = itemToEdit.isConsumable;
-
-            // Store the ID of the item being edited
-            editingItemIdInput.value = itemId;
-
-            // Ensure category dropdown is populated before showing modal
-            if (typeof window.updateCategoryDropdowns === 'function') window.updateCategoryDropdowns();
-            if (editItemImageUrlInput && editItemImagePreview && typeof window.updateImagePreview === 'function') window.updateImagePreview(itemToEdit.imageUrl, editItemImagePreview); // Update preview when opening edit modal
-
-            // Hide loading indicator
-            if (editItemLoadingIndicator) editItemLoadingIndicator.classList.add('hidden');
-
-            // Show the modal
-            editItemModal.style.display = 'block';
-        }
-
-        // saveEditedItem function is moved to itemService.js
-
-        // Function to close the edit item modal
-        window.closeEditModal = function closeEditModal() {
-            if (editItemModal) editItemModal.style.display = 'none';
-            if (editItemImagePreview) editItemImagePreview.style.display = 'none'; // Hide preview when closing modal
-        }
+        // openEditModal and closeEditModal are now part of ModalHandler in ui/modalHandler.js
+        // window.openEditModal = function openEditModal(itemId) { ... }
+        // window.closeEditModal = function closeEditModal() { ... }
 
          // Function to toggle packed status for an item specifically on the pack detail page
-        window.togglePackItemPackedOnDetailPage = function togglePackItemPackedOnDetailPage(itemId) {
-            const item = window.itemService.getItemById(itemId); // Use service
-            if (item && window.currentManagingPackId) {
-                const updatedItem = { ...item, packed: !item.packed };
-                if (window.itemService.saveEditedItem(itemId, updatedItem)) {
-                    if (typeof window.renderPackDetail === 'function') window.renderPackDetail(window.currentManagingPackId);
-                    if (typeof window.renderAll === 'function') window.renderAll(); // To update pack progress bars
-                } else {
-                    alert("Failed to update item packed status on detail page.");
-                }
-            } else {
-                console.error(`Item with ID ${itemId} not found or no current pack ID for togglePackItemPackedOnDetailPage.`);
-            }
-            // Removed persistenceService.saveData()
-        }
+         // closeEditModal is now part of ModalHandler in ui/modalHandler.js
+
+        // MOVED to ui/packDisplay.js: _togglePackItemPackedOnDetailPage (as internal method)
 
         // unpackAllInCurrentPack is moved to packService.js
 
         // callGeminiAPI, callImagenAPI, suggestItemDetails, generatePackList
         // have been moved to services/apiService.js
 
-        /**
-         * Updates the source of an image preview element.
-         * If the URL is empty, the image preview is hidden.
-         * If the image fails to load, it falls back to a placeholder.
-         * @param {string} url The URL for the image.
-         * @param {HTMLImageElement} imgElement The <img> element to update.
-         */
-        window.updateImagePreview = function updateImagePreview(url, imgElement) {
-            if (!imgElement) return; // Guard
-            if (url && url.trim() !== '') {
-                imgElement.src = url;
-                imgElement.style.display = 'block'; // Show the image
-            } else {
-                imgElement.src = 'https://placehold.co/80x80/eeeeee/aaaaaa?text=Image'; // Fallback to a generic placeholder
-                imgElement.style.display = 'none'; // Hide if no URL
-            }
-        }
+        // updateImagePreview function has been moved to utils/imageUtils.js (soon to be ui/utils/imageUtils.js)
 
         // LLM Feature functions (callGeminiAPI, callImagenAPI, suggestItemDetails, generatePackList)
         // have been moved to services/apiService.js
@@ -889,7 +405,7 @@
                     addCategory: (name) => window.categoryService.addCategory(name),
                     updateCategoryDropdowns: () => { if(typeof window.updateCategoryDropdowns === 'function') window.updateCategoryDropdowns(); },
                     showAlert: (message) => window.alert(message),
-                    updateImagePreview: (url, imgElement) => { if(typeof window.updateImagePreview === 'function') window.updateImagePreview(url, imgElement); },
+                    updateImagePreview: (url, imgElement) => { if(typeof window.uiUtils.updateImagePreview === 'function') window.uiUtils.updateImagePreview(url, imgElement); },
                     renderAll: () => { if(typeof window.renderAll === 'function') window.renderAll(); }
                 };
 
@@ -1002,7 +518,6 @@
             });
         }
 
-
          // Allow adding pack by pressing Enter in the pack name field
          if (packNameInput) {
              packNameInput.addEventListener('keypress', function(event) {
@@ -1046,8 +561,8 @@
          }
 
         // New: Event listeners for image URL input to update preview
-        if (newItemImageUrlInput && newItemImagePreview) newItemImageUrlInput.addEventListener('input', () => { if (typeof window.updateImagePreview === 'function') window.updateImagePreview(newItemImageUrlInput.value, newItemImagePreview); });
-        if (editItemImageUrlInput && editItemImagePreview) editItemImageUrlInput.addEventListener('input', () => { if (typeof window.updateImagePreview === 'function') window.updateImagePreview(editItemImageUrlInput.value, editItemImagePreview); });
+        if (newItemImageUrlInput && newItemImagePreview) newItemImageUrlInput.addEventListener('input', () => { if (typeof window.uiUtils.updateImagePreview === 'function') window.uiUtils.updateImagePreview(newItemImageUrlInput.value, newItemImagePreview); });
+        if (editItemImageUrlInput && editItemImagePreview) editItemImageUrlInput.addEventListener('input', () => { if (typeof window.uiUtils.updateImagePreview === 'function') window.uiUtils.updateImagePreview(editItemImageUrlInput.value, editItemImagePreview); });
 
 
         // Event delegation for item actions (edit, delete) within the inventory section
@@ -1058,7 +573,7 @@
                 const itemId = target.dataset.itemId; // Get the item ID from data attribute
 
                 if (target.classList.contains('edit-button')) {
-                     if (typeof window.openEditModal === 'function') window.openEditModal(itemId);
+                     if (window.modalHandler) window.modalHandler.openEditModal(itemId);
                 } else if (target.classList.contains('delete-button')) {
                     if (window.itemService && typeof window.itemService.deleteItem === 'function') {
                         if (window.itemService.deleteItem(itemId, window.confirm)) {
@@ -1072,116 +587,20 @@
             });
         }
 
-         // Event delegation for pack actions (view/manage, delete) within the manage packs section
-         const managePacksSection = document.getElementById('manage-packs-section');
-         if (managePacksSection) {
-             managePacksSection.addEventListener('click', function(event) {
-                 const target = event.target;
-                 const packId = target.dataset.packId; // Get the pack ID from data attribute
+         // MOVED to ui/packDisplay.js: Event listener for packListElement (managePacksSection)
+         // MOVED to ui/packDisplay.js: Event listener for packDetailSection
+         // MOVED to ui/packDisplay.js: Event listener for unpackAllButton
+         // MOVED to ui/packDisplay.js: Event listener for packPackingListElement
 
-                 if (target.classList.contains('view-pack-button')) {
-                     if (typeof window.showSection === 'function') window.showSection('pack-detail-section');
-                     if (typeof window.renderPackDetail === 'function') window.renderPackDetail(packId);
-                 } else if (target.classList.contains('delete-button')) {
-                    if (window.packService && typeof window.packService.deletePack === 'function') {
-                        if (window.packService.deletePack(packId, window.confirm)) {
-                            if (typeof window.renderAll === 'function') window.renderAll();
-                        }
-                    } else {
-                        console.error("packService.deletePack is not available.");
-                        alert("Error: Could not delete pack at this time.");
-                    }
-                 }
-             });
-         }
-
-         // Event delegation for adding/removing items AND packing on the pack detail page
-         if (packDetailSection) {
-             packDetailSection.addEventListener('click', function(event) {
-                 const target = event.target;
-                 const itemId = target.dataset.itemId; // Get the item ID
-
-                 if (target.classList.contains('add-to-pack-button') && window.currentManagingPackId) {
-                    if (window.packService && typeof window.packService.addItemToPack === 'function') {
-                        if (window.packService.addItemToPack(itemId, window.currentManagingPackId)) {
-                            if (typeof window.renderPackDetail === 'function') window.renderPackDetail(window.currentManagingPackId);
-                        }
-                    } else {
-                        console.error("packService.addItemToPack is not available.");
-                        alert("Error: Could not add item to pack at this time.");
-                    }
-                 } else if (target.classList.contains('remove-from-pack-button') && window.currentManagingPackId) {
-                    if (window.packService && typeof window.packService.removeItemFromPack === 'function') {
-                        if (window.packService.removeItemFromPack(itemId, window.currentManagingPackId)) {
-                            if (typeof window.renderPackDetail === 'function') window.renderPackDetail(window.currentManagingPackId);
-                        }
-                    } else {
-                        console.error("packService.removeItemFromPack is not available.");
-                        alert("Error: Could not remove item from pack at this time.");
-                    }
-                 } else if (target.classList.contains('pack-item-packed-button')) {
-                     if (typeof window.togglePackItemPackedOnDetailPage === 'function') window.togglePackItemPackedOnDetailPage(itemId);
-                 }
-             });
-         }
-
-
-         // Event listener for the "Tout Déballer" button
-         if (unpackAllButton) {
-             unpackAllButton.addEventListener('click', () => {
-                if (window.packService && typeof window.packService.unpackAllInCurrentPack === 'function' && window.currentManagingPackId) {
-                    if (window.packService.unpackAllInCurrentPack(window.currentManagingPackId)) {
-                        if (typeof window.renderPackDetail === 'function') window.renderPackDetail(window.currentManagingPackId);
-                        if (typeof window.renderAll === 'function') window.renderAll();
-                    }
-                } else {
-                    console.error("packService.unpackAllInCurrentPack is not available or pack ID is missing.");
-                    alert("Error: Could not unpack all items at this time.");
-                }
-             });
-         }
-
-         // Event listener for the view filter select
-         if (viewFilterSelect) viewFilterSelect.addEventListener('change', window.renderListByView);
-
-         // Event listener for checkboxes within the pack packing modal (event delegation)
-         if (packPackingListElement) {
-             packPackingListElement.addEventListener('change', function(event) {
-                 const target = event.target;
-                 if (target.type === 'checkbox') {
-                     const itemId = target.dataset.itemId;
-                     if (typeof window.togglePackItemPacked === 'function') window.togglePackItemPacked(itemId);
-                 }
-             });
-         }
-
-
-
-         // Event listener to close the packing modal
-         if (closePackingModalButton) {
-             closePackingModalButton.addEventListener('click', function() {
-                 if (packPackingModal) packPackingModal.classList.add('hidden'); // Hide the modal
-                 if (typeof window.renderAll === 'function') window.renderAll(); // Re-render main view to update pack progress bars and weights
-             });
-         }
-
-
-         // Close packing modal if clicking outside (optional)
-         if (packPackingModal) {
-             packPackingModal.addEventListener('click', function(event) {
-                 if (event.target === packPackingModal) {
-                     packPackingModal.classList.add('hidden');
-                     if (typeof window.renderAll === 'function') window.renderAll(); // Re-render main view
-                 }
-             });
-         }
-
+         // Close Packing Modal listeners are now in ModalHandler
+         // if (closePackingModalButton) { ... }
+         // if (packPackingModal) { ... }
 
         // Event listener for the Save Item button in the edit modal
         if (saveItemButton) {
             saveItemButton.addEventListener('click', () => {
                 const itemId = editingItemIdInput.value;
-                const updatedData = {
+                const itemDataToSave = {
                     name: editItemNameInput.value.trim(),
                     weight: parseFloat(editItemWeightInput.value),
                     brand: editItemBrandInput.value.trim(),
@@ -1192,11 +611,11 @@
                     isConsumable: editItemConsumableInput.checked,
                 };
 
-                if (itemId && updatedData.name && !isNaN(updatedData.weight)) {
+                if (itemId && itemDataToSave.name && !isNaN(itemDataToSave.weight)) {
                     if (window.itemService && typeof window.itemService.saveEditedItem === 'function') {
-                        const success = window.itemService.saveEditedItem(itemId, updatedData);
+                        const success = window.itemService.saveEditedItem(itemId, itemDataToSave);
                         if (success) {
-                            if (typeof window.closeEditModal === 'function') window.closeEditModal();
+                            if (window.modalHandler) window.modalHandler.closeEditModal();
                             if (typeof window.renderAll === 'function') window.renderAll();
                         } else {
                             alert("Failed to save item. Please check console for errors.");
@@ -1229,7 +648,7 @@
                     addCategory: (name) => window.categoryService.addCategory(name),
                     updateCategoryDropdowns: () => { if(typeof window.updateCategoryDropdowns === 'function') window.updateCategoryDropdowns(); },
                     showAlert: (message) => window.alert(message),
-                    updateImagePreview: (url, imgElement) => { if(typeof window.updateImagePreview === 'function') window.updateImagePreview(url, imgElement); },
+                    updateImagePreview: (url, imgElement) => { if(typeof window.uiUtils.updateImagePreview === 'function') window.uiUtils.updateImagePreview(url, imgElement); },
                     renderAll: () => { if(typeof window.renderAll === 'function') window.renderAll(); }
                 };
 
@@ -1244,17 +663,9 @@
 
 
 
-        // Event listener to close the edit item modal
-        if (closeEditModalButton) closeEditModalButton.addEventListener('click', window.closeEditModal);
-
-         // Close edit modal if clicking outside (optional)
-         if (editItemModal) {
-             editItemModal.addEventListener('click', function(event) {
-                 if (event.target === editItemModal) {
-                     if (typeof window.closeEditModal === 'function') window.closeEditModal();
-                 }
-             });
-         }
+        // Close Edit Modal listeners are now in ModalHandler
+        // if (closeEditModalButton) closeEditModalButton.addEventListener('click', window.closeEditModal);
+        // if (editItemModal) { ... }
 
 
          // Event delegation for category headers and delete buttons in category management section
@@ -1293,32 +704,16 @@
                  // Event delegation for item actions (edit) within the category management section
                  if (target.classList.contains('edit-button')) {
                      const itemId = target.dataset.itemId;
-                     if (typeof window.openEditModal === 'function') window.openEditModal(itemId); // openEditModal remains for now
+                     if (window.modalHandler) window.modalHandler.openEditModal(itemId);
                  }
              });
          }
 
+        // Sidebar navigation is now handled by NavigationHandler
+        // The old direct event listeners for sidebarLinks are removed.
 
-
-         // Event listeners for sidebar navigation links
-         if (sidebarLinks) {
-             sidebarLinks.forEach(link => {
-                 link.addEventListener('click', function(event) {
-                     event.preventDefault(); // Prevent default link behavior
-                     const sectionId = this.dataset.section + '-section'; // Get target section ID
-                     console.log('Sidebar link clicked, target sectionId:', sectionId); // Debug log
-                     if (typeof window.showSection === 'function') window.showSection(sectionId); // Show the selected section
-                 });
-             });
-         }
-
-
-
-        // Initial data load and rendering will be handled differently, likely by an init function
-        // if (typeof window.loadData === 'function') window.loadData(); // This call is removed/commented
-
-        // Show the default section on load (Inventory)
-        // if (typeof window.showSection === 'function') window.showSection('inventory-section'); // This might also move to an init
+        // Initial data load and rendering is handled by initApp
+        // Default section display is also handled by initApp
 
 async function initApp() {
     // Load data
@@ -1334,32 +729,71 @@ async function initApp() {
     window.packs = window.packService.getPacks();
     window.categories = window.categoryService.getCategories();
 
+
+    // Instantiate ModalHandler first
+    if (window.appComponents && window.appComponents.ModalHandler && window.itemService && window.uiUtils) {
+        window.modalHandler = new window.appComponents.ModalHandler(window.itemService, window.uiUtils);
+    } else {
+        console.error("ModalHandler component, itemService, or uiUtils not found. Modals may not work correctly.");
+    }
+
+    // Instantiate ItemDisplay
+    if (window.appComponents && window.appComponents.ItemDisplay && window.itemService && window.categoryService) {
+        window.itemDisplay = new window.appComponents.ItemDisplay(window.itemService, window.categoryService);
+    } else {
+        console.error("ItemDisplay component, itemService, or categoryService not found. Item listing will not work correctly.");
+    }
+
+    // Instantiate ItemDisplay
+    if (window.appComponents && window.appComponents.ItemDisplay && window.itemService && window.categoryService) {
+        window.itemDisplay = new window.appComponents.ItemDisplay(window.itemService, window.categoryService);
+    } else {
+        console.error("ItemDisplay component, itemService, or categoryService not found. Item listing will not work correctly.");
+    }
+
+    // Instantiate PackDisplay
+    if (window.appComponents && window.appComponents.PackDisplay && window.packService && window.itemService && window.modalHandler) {
+        window.packDisplay = new window.appComponents.PackDisplay(window.packService, window.itemService, window.modalHandler);
+    } else {
+        console.error("PackDisplay component or its service dependencies not found. Pack functionality will be limited.");
+    }
+
+    // Instantiate NavigationHandler (now can receive itemDisplay and packDisplay)
+    let navigationHandler;
+    if (window.appComponents && window.appComponents.NavigationHandler) {
+        navigationHandler = new window.appComponents.NavigationHandler(
+            contentSections,
+            sidebarLinks,
+            window.itemDisplay,
+            window.packDisplay, // Pass packDisplay instance
+            null, // categoryDisplay placeholder
+            null, // formHandler placeholder
+            window.modalHandler,
+            null  // aiFeaturesUI placeholder
+        );
+        navigationHandler.showSection('inventory-section');
+        window.navigationHandler = navigationHandler;
+    } else {
+        console.error("NavigationHandler component not found. Sidebar navigation will not work.");
+    }
+
     // Initial UI rendering
     if (typeof window.renderAll === 'function') {
         window.renderAll();
-    }
-
-    // Show default section
-    if (typeof window.showSection === 'function') {
-        window.showSection('inventory-section');
     }
 }
 
 
         if (typeof module !== 'undefined' && module.exports) {
             module.exports = {
-                items: typeof window !== 'undefined' ? window.items : undefined, // items will be managed by itemService
-                packs: typeof window !== 'undefined' ? window.packs : undefined, // packs will be managed by packService
-                categories: typeof window !== 'undefined' ? window.categories : undefined, // categories will be managed by categoryService
-                // addItem, deleteItem, saveEditedItem are in itemService
-                // addPack, deletePack, addItemToPack, removeItemFromPack, unpackAllInCurrentPack are in packService
-                // addCategory, deleteCategory are in categoryService
-                // loadData is now in persistenceService
-                // saveData is now in persistenceService
-                // API functions are in apiService.js
+                items: typeof window !== 'undefined' ? window.items : undefined,
+                packs: typeof window !== 'undefined' ? window.packs : undefined,
+                categories: typeof window !== 'undefined' ? window.categories : undefined,
                 renderAll: typeof window !== 'undefined' ? window.renderAll : undefined,
-                showSection: typeof window !== 'undefined' ? window.showSection : undefined,
-                openEditModal: typeof window !== 'undefined' ? window.openEditModal : undefined, // UI interaction, might stay or move to a UI service
+                // MOVED functions are now part of their respective UI components (ItemDisplay, PackDisplay, ModalHandler, NavigationHandler)
+                updateCategoryDropdowns: typeof window !== 'undefined' ? window.updateCategoryDropdowns : undefined, // Still global for now
+                updateViewFilterOptions: typeof window !== 'undefined' ? window.updateViewFilterOptions : undefined, // Still global for now
+                togglePacked: typeof window !== 'undefined' ? window.togglePacked : undefined // Still global for now (used by ItemDisplay)
             };
         }
 

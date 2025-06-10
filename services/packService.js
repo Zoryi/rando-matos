@@ -1,13 +1,12 @@
 // services/packService.js
 (function(global) {
     "use strict";
-    // console.log('Executing packService.js');
+    const Pack = (global.appModels && global.appModels.Pack) ? global.appModels.Pack : class DefaultPack { constructor(data) { Object.assign(this, data); } };
+
     let packs = []; // Internal state for packs
 
     const persistence = global.persistenceService || {
-        saveData: () => {
-            // console.warn("PackService: persistenceService.saveData not found. This is a mock stub.");
-        }
+        saveData: () => {}
     };
 
     function generatePackId() {
@@ -16,14 +15,14 @@
 
     global.packService = {
         setPacks: function(newPacks) {
-            packs = newPacks ? JSON.parse(JSON.stringify(newPacks)) : []; // Deep copy
+            packs = newPacks ? newPacks.map(packData => packData instanceof Pack ? packData : new Pack(packData)) : [];
         },
         getPacks: function() {
-            return JSON.parse(JSON.stringify(packs)); // Deep copy
+            return packs.map(pack => new Pack(pack)); // Return new instances
         },
         getPackById: function(packId) {
             const pack = packs.find(p => p.id === packId);
-            return pack ? JSON.parse(JSON.stringify(pack)) : undefined; // Deep copy
+            return pack ? new Pack(pack) : undefined; // Return a new instance
         },
 
         addPack: function(packName) {
@@ -32,12 +31,14 @@
                 else console.error("PackService: Invalid pack name.");
                 return null;
             }
-            const newPack = { id: generatePackId(), name: packName.trim() };
+            const newPack = new Pack({ id: generatePackId(), name: packName.trim() });
             packs.push(newPack);
-            const currentItems = (global.window && global.window.items) ? global.window.items : [];
-            const currentCategories = (global.window && global.window.categories) ? global.window.categories : [];
-            persistence.saveData(currentItems, packs, currentCategories);
-            return JSON.parse(JSON.stringify(newPack)); // Return a copy
+
+            const plainPacks = packs.map(pack => ({...pack}));
+            const currentItems = (global.itemService) ? global.itemService.getItems().map(i => ({...i})) : [];
+            const currentCategories = (global.categoryService) ? global.categoryService.getCategories().map(c => ({...c})) : [];
+            persistence.saveData(currentItems, plainPacks, currentCategories);
+            return new Pack(newPack); // Return a new instance
         },
 
         deletePack: function(packId, confirmFunc) {
