@@ -1,347 +1,334 @@
 const assert = require('assert');
-   const { JSDOM } = require('jsdom');
-   const fs = require('fs');
-   const path = require('path');
+const { JSDOM } = require('jsdom');
+const fs = require('fs');
+const path = require('path');
+const sinon = require('sinon'); // Using sinon for stubs
 
-   // Using the full HTML content from item.test.js for diagnostics
-   let indexHtmlFullContent = `
-       <!DOCTYPE html><html><head></head><body>
-         <section id="new-item-section">
-           <input id="item-name" /> <input id="item-weight" />
-           <input id="item-brand" /> <select id="item-category"><option value="">-- Select --</option></select>
-           <input id="item-tags" /> <input id="item-capacity" />
-           <input id="item-image-url" type="url" /> {/* Crucial: type="url" */}
-           <input id="item-consumable" type="checkbox" />
-           <div id="new-item-image-preview"></div> <button id="add-item-button"></button>
-         </section>
-         <section id="edit-item-section">
-            <input id="edit-item-name" /> <input id="edit-item-weight" />
-            <input id="edit-item-brand" /> <select id="edit-item-category"><option value="">-- Select --</option></select>
-            <input id="edit-item-tags" /> <input id="edit-item-capacity" />
-            <input id="edit-item-image-url" type="url" />
-            <input id="edit-item-consumable" type="checkbox" />
-            <div id="edit-item-image-preview" style="display:none;"></div>
-            <button id="save-item-button"></button> <input id="editing-item-id" type="hidden" />
-            <button id="close-edit-modal"></button>
-            <button id="suggest-edit-item-details-button"></button>
-            <div id="edit-item-loading-indicator" class="hidden"></div>
-         </section>
-         <ul id="item-list"></ul> <div id="total-weight"></div> <select id="view-filter"></select>
-         <input id="category-name" />
-         {/* Sidebar and main content structure for showSection */}
-         <div class="sidebar"><nav><ul>
-            <li><a href="#" data-section="inventory" id="mockSidebarLink1">Inventory</a></li>
-            <li><a href="#" data-section="new-item" id="mockSidebarLink2">New Item</a></li>
-            {/* Add other links if app.js queries them */}
-         </ul></nav></div>
-         <div class="main-content">
-            <section id="inventory-section" class="content-section"></section>
-            {/* <section id="new-item-section" class="content-section"></section> Referenced above */}
-            <section id="manage-packs-section" class="content-section"></section>
-            <section id="manage-categories-section" class="content-section"></section>
-            <section id="pack-detail-section" class="content-section"></section>
-            <section id="generate-pack-section" class="content-section"></section>
-         </div>
-         {/* Other elements app.js might getElementById */}
-         <div id="pack-list"></div>
-         <div id="category-management-list"></div>
-         <div id="pack-packing-modal"><div id="packing-pack-name"></div><ul id="pack-packing-list"></ul><button id="close-packing-modal"></button></div>
-         <div id="pack-detail-title"></div><ul id="items-in-pack-list"></ul><ul id="available-items-list"></ul><button id="unpack-all-button"></button>
-         <div id="inventory-weight"></div>
-         <input id="gen-pack-destination" /><input id="gen-pack-duration" /><input id="gen-pack-activity" />
-         <button id="generate-pack-list-button"></button><div id="generate-pack-loading-indicator"></div>
-         <div id="generated-pack-results"><ul id="generated-items-list"></ul><button id="add-selected-generated-items-button"></button></div>
-         <div id="edit-item-modal" style="display:none;"></div>
-       </body></html>`;
+// Full HTML content (can be trimmed down later if tests are stable)
+let indexHtmlFullContent = `
+    <!DOCTYPE html><html><head><title>Test Page</title></head><body>
+      <section id="new-item-section">
+        <input id="item-name" /> <input id="item-weight" />
+        <input id="item-brand" /> <select id="item-category"><option value="">-- Select --</option></select>
+        <input id="item-tags" /> <input id="item-capacity" />
+        <input id="item-image-url" type="url" />
+        <input id="item-consumable" type="checkbox" />
+        <div id="new-item-image-preview"></div> <button id="add-item-button"></button>
+        <button id="suggest-new-item-details-button"></button>
+        <div id="new-item-loading-indicator" class="hidden"></div>
+      </section>
+      <section id="edit-item-section">
+         <input id="edit-item-name" /> <input id="edit-item-weight" />
+         <input id="edit-item-brand" /> <select id="edit-item-category"><option value="">-- Select --</option></select>
+         <input id="edit-item-tags" /> <input id="edit-item-capacity" />
+         <input id="edit-item-image-url" type="url" />
+         <input id="edit-item-consumable" type="checkbox" />
+         <div id="edit-item-image-preview" style="display:none;"></div>
+         <button id="save-item-button"></button> <input id="editing-item-id" type="hidden" />
+         <button id="close-edit-modal"></button>
+         <button id="suggest-edit-item-details-button"></button>
+         <div id="edit-item-loading-indicator" class="hidden"></div>
+      </section>
+      <ul id="item-list"></ul> <div id="total-weight"></div> <select id="view-filter"></select>
+      <input id="category-name" /> <button id="add-category-button"></button>
+      <input id="pack-name" /> <button id="add-pack-button"></button> {/* Added pack-name input */}
+      <div class="sidebar"><nav><ul>
+         <li><a href="#" data-section="inventory" id="mockSidebarLink1">Inventory</a></li>
+         <li><a href="#" data-section="new-item" id="mockSidebarLink2">New Item</a></li>
+      </ul></nav></div>
+      <div class="main-content">
+         <section id="inventory-section" class="content-section active"></section>
+         <section id="new-item-section" class="content-section"></section>
+         <section id="manage-packs-section" class="content-section"></section>
+         <section id="manage-categories-section" class="content-section"></section>
+         <section id="pack-detail-section" class="content-section"><h2 id="pack-detail-title"></h2><ul id="items-in-pack-list"></ul><ul id="available-items-list"></ul><button id="unpack-all-button"></button></section>
+         <section id="generate-pack-section" class="content-section"></section>
+      </div>
+      <ul id="pack-list"></ul> {/* Changed from div to ul to match app.js expectations */}
+      <div id="category-management-list"></div>
+      <div id="pack-packing-modal"><div id="packing-pack-name"></div><ul id="pack-packing-list"></ul><button id="close-packing-modal"></button></div>
+      <div id="inventory-weight"></div>
+      <input id="gen-pack-destination" /><input id="gen-pack-duration" /><input id="gen-pack-activity" />
+      <button id="generate-pack-list-button"></button><div id="generate-pack-loading-indicator"></div>
+      <div id="generated-pack-results"><ul id="generated-items-list"></ul><button id="add-selected-generated-items-button"></button></div>
+      <div id="edit-item-modal" style="display:none;"></div>
+      <button id="clear-all-button"></button> {/* Added clear all button */}
+    </body></html>`;
 
-   let appJsContent = '';
-   try {
-       appJsContent = fs.readFileSync(path.resolve(__dirname, '../app.js'), 'utf8');
-   } catch (err) {
-       console.error('CRITICAL: Failed to read app.js. Tests cannot run.', err);
-       throw err;
-   }
+let appJsContent = '';
+try {
+    appJsContent = fs.readFileSync(path.resolve(__dirname, '../app.js'), 'utf8');
+} catch (err) {
+    console.error('CRITICAL: Failed to read app.js. Tests cannot run.', err);
+    throw err;
+}
 
-   let app;
+let dom;
+let window;
+let app; // To hold the app's exported functions if module.exports is used, or global functions
 
-   describe('Pack Management', function() {
-       beforeEach(function() {
-           const dom = new JSDOM(indexHtmlFullContent, { url: "http://localhost", runScripts: "outside-only", resources: "usable" });
+// Stubs for global functions app.js might call
+let showAlertStub, confirmStub, renderPacksStub, updateViewFilterOptionsStub, saveDataStub, renderAllStub;
+let originalConsoleLog, originalConsoleError, originalConsoleWarn;
+let appJsLogs = []; // To capture logs from app.js
 
-           global.window = dom.window; // Set Node's global.window to JSDOM's window
-           global.document = dom.window.document; // Set Node's global.document to JSDOM's document
-           global.localStorage = dom.window.localStorage; // Mock localStorage
+describe('Pack Management', function() {
+    beforeEach(function() {
+        dom = new JSDOM(indexHtmlFullContent, { url: "http://localhost", runScripts: "outside-only", resources: "usable" });
+        window = dom.window;
+        global.window = window;
+        global.document = window.document;
+        global.localStorage = window.localStorage;
 
-           // Mock functions directly on dom.window for app.js context
-           dom.window.alert = (msg) => {
-               console.log(`PackTest dom.window.alert: ${msg}`);
-               dom.window.lastAlertMsg = msg; // Store for assertion if needed by a test
-           };
-           dom.window.confirm = (msg) => {
-               console.log(`PackTest dom.window.confirm: ${msg}`);
-               // Default to true, specific tests can override by re-mocking dom.window.confirm
-               return true;
-           };
-           dom.window.fetch = async () => Promise.resolve({ ok: true, json: async () => ({}) });
+        appJsLogs = []; // Reset logs
+        originalConsoleLog = console.log;
+        originalConsoleError = console.error;
+        originalConsoleWarn = console.warn;
 
-           // Mock global functions from app.js, attached to dom.window
-           dom.window.renderPacks = () => { /* console.log('Mocked dom.window.renderPacks'); */ };
-           dom.window.updateViewFilterOptions = () => { /* console.log('Mocked dom.window.updateViewFilterOptions'); */ };
-           dom.window.saveData = () => { /* console.log('Mocked dom.window.saveData'); */ };
-           dom.window.renderAll = () => { /* console.log('Mocked dom.window.renderAll'); */ };
-           dom.window.renderPackDetail = () => { /* console.log('Mocked dom.window.renderPackDetail'); */ };
-           dom.window.loadData = () => {
-               if(dom.window.items === undefined) dom.window.items = [];
-               if(dom.window.packs === undefined) dom.window.packs = [];
-               if(dom.window.categories === undefined) dom.window.categories = [];
-               if(typeof dom.window.renderAll === 'function') dom.window.renderAll();
-           };
-           // Ensure other global functions potentially called by app.js during init are also on dom.window
-           dom.window.updateCategoryDropdowns = () => {};
-           dom.window.showSection = () => {};
-           dom.window.renderItems = () => {};
-           dom.window.renderCategories = () => {};
-           dom.window.renderCategoryManagement = () => {};
-           dom.window.renderPackPacking = () => {};
-           dom.window.renderListByView = () => {};
-           dom.window.updateImagePreview = () => {};
+        // Evaluate app.js in the JSDOM context FIRST
+        try {
+            window.eval(appJsContent);
+        } catch (e) {
+            originalConsoleError("CRITICAL ERROR evaluating app.js in JSDOM (before stubs):", e, "\nCaptured logs so far:\n", appJsLogs.join('\n'));
+            // Restore console for mocha output
+            global.console.log = originalConsoleLog;
+            global.console.error = originalConsoleError;
+            global.console.warn = originalConsoleWarn;
+            this.currentTest.emit('error', e); // Make sure Mocha knows about this error
+            throw e; // Stop test execution here
+        }
+
+        // NOW, Capture console logs from app.js (or re-assign if eval changed them)
+        // and stub global functions AFTER app.js has defined them on 'window'.
+        global.console.log = (...args) => { appJsLogs.push("[LOG] " + args.join(' ')); originalConsoleLog(...args); };
+        global.console.error = (...args) => { appJsLogs.push("[ERROR] " + args.join(' ')); originalConsoleError(...args); };
+        global.console.warn = (...args) => { appJsLogs.push("[WARN] " + args.join(' ')); originalConsoleWarn(...args); };
+
+        // Stub global functions app.js relies on
+        // Ensure these functions exist on window object before stubbing
+        if (typeof window.alert !== 'function') window.alert = () => {};
+        if (typeof window.confirm !== 'function') window.confirm = () => true;
+        if (typeof window.renderPacks !== 'function') { originalConsoleError("Warning: window.renderPacks not found by test setup!"); window.renderPacks = () => {}; }
+        if (typeof window.updateViewFilterOptions !== 'function') { originalConsoleError("Warning: window.updateViewFilterOptions not found by test setup!"); window.updateViewFilterOptions = () => {}; }
+        if (typeof window.saveData !== 'function') { originalConsoleError("Warning: window.saveData not found by test setup!"); window.saveData = () => {}; }
+        if (typeof window.renderAll !== 'function') { originalConsoleError("Warning: window.renderAll not found by test setup!"); window.renderAll = () => {}; }
+
+        showAlertStub = sinon.stub(window, 'alert');
+        confirmStub = sinon.stub(window, 'confirm').returns(true); // Default to true
+        renderPacksStub = sinon.stub(window, 'renderPacks');
+        updateViewFilterOptionsStub = sinon.stub(window, 'updateViewFilterOptions');
+        saveDataStub = sinon.stub(window, 'saveData');
+        renderAllStub = sinon.stub(window, 'renderAll');
+
+        // Mock other functions that might be called
+        if (typeof window.renderPackDetail !== 'function') window.renderPackDetail = () => {};
+        if (typeof window.updateCategoryDropdowns !== 'function') window.updateCategoryDropdowns = () => {};
+        if (typeof window.showSection !== 'function') window.showSection = () => {};
+        if (typeof window.renderItems !== 'function') window.renderItems = () => {};
+        if (typeof window.renderCategories !== 'function') window.renderCategories = () => {};
+        if (typeof window.renderCategoryManagement !== 'function') window.renderCategoryManagement = () => {};
+        if (typeof window.renderPackPacking !== 'function') window.renderPackPacking = () => {};
+        if (typeof window.renderListByView !== 'function') window.renderListByView = () => {};
+        if (typeof window.updateImagePreview !== 'function') window.updateImagePreview = () => {};
+        if (typeof window.fetch !== 'function') window.fetch = () => {}; // Basic fetch mock if not defined - CORRECTED SYNTAX
+
+        sinon.stub(window, 'renderPackDetail');
+        sinon.stub(window, 'updateCategoryDropdowns');
+        sinon.stub(window, 'showSection');
+        sinon.stub(window, 'renderItems');
+        sinon.stub(window, 'renderCategories');
+        sinon.stub(window, 'renderCategoryManagement');
+        sinon.stub(window, 'renderPackPacking');
+        sinon.stub(window, 'renderListByView');
+        sinon.stub(window, 'updateImagePreview');
+        sinon.stub(window, 'fetch').resolves({ ok: true, json: async () => ({}) });
+
+        // Re-check app.js evaluation success for app object assignment
+        try {
+            // Direct usage of functions from window scope, and direct access to window.packs/items
+            app = { // Keep 'app' namespace for convenience in tests, but functions point to window
+                addPack: window.addPack,
+                deletePack: window.deletePack,
+                addItemToPack: window.addItemToPack,
+                removeItemFromPack: window.removeItemFromPack,
+                getPacks: () => window.packs, // Directly access window.packs
+                setPacks: (newPacks) => { window.packs = newPacks; }, // Directly set window.packs
+                getItems: () => window.items, // Directly access window.items
+                setItems: (newItems) => { window.items = newItems; }  // Directly set window.items
+            };
+
+            // Ensure global arrays are initialized on window *before* loadData might use them
+            // (app.js itself also initializes them, this is belt-and-suspenders)
+            window.packs = window.packs || [];
+            window.items = window.items || [];
+            window.categories = window.categories || [];
+
+            // Initialize/Reset global arrays for the test context
+            // app.js's loadData will use these if called.
+            // Tests will also use these via app.get/setPacks/Items.
+            window.packs = [];
+            window.items = [];
+            window.categories = [];
+
+            // Call loadData if it exists. It will use the stubs already in place.
+            // The stubs are created once before this and are on `window`.
+            if (typeof window.loadData === 'function') {
+                window.loadData(); // This will call the app's loadData, which might call stubbed functions.
+            }
+
+        } catch (e) {
+            originalConsoleError("ERROR during app object assignment or loadData in JSDOM for Pack tests:", e, "\nCaptured logs so far:\n", appJsLogs.join('\n'));
+            // Restore console for mocha output
+            global.console.log = originalConsoleLog;
+            global.console.error = originalConsoleError;
+            global.console.warn = originalConsoleWarn;
+            this.currentTest.emit('error', e);
+            throw e;
+        }
+
+        // Ensure packs and items are reset for each test *again* here to ensure clean state if loadData didn't run or if it's complex
+        // This makes app.setPacks([]) the definitive state for these arrays before each test.
+        if(app && typeof app.setPacks === 'function') app.setPacks([]);
+        if(app && typeof app.setItems === 'function') app.setItems([]);
+        // No app.setCategories, so directly:
+        window.categories = [];
 
 
-           // Override JSDOM's getElementById for specific behaviors if needed
-           // This getElementById is attached to global.document, which IS dom.window.document
-           const originalGetElementById = global.document.getElementById.bind(global.document);
-           global.document.getElementById = function(id) {
-               const element = originalGetElementById(id);
-               if (element) { // Element IS in indexHtmlMinimalContent
-                   if (!element.addEventListener) { element.addEventListener = function(event, handler) { /* polyfill */ }; }
-                   if (!element.removeEventListener) { element.removeEventListener = function() {}; } // Added for completeness
-                   if (!element.classList) { element.classList = { add: function(){}, remove: function(){}, contains: function(){ return false; }, toggle: function(){} }; } // Corrected: removed extra }
-                   if (!element.style) { element.style = {}; }
-                   if (!element.dispatchEvent) { // Explicitly polyfill/ensure dispatchEvent
-                       element.dispatchEvent = function(event) {
-                           // console.warn(`Polyfilled dispatchEvent for ${this.id || 'JSDOM element lacking dispatchEvent'}`);
-                           return true; // Basic mock, assumes event handled, no default prevention
-                       };
-                   }
-                   if (!element.focus) { element.focus = function() { /* console.log(`Polyfill focus for ${this.id || 'JSDOM element'}`); */ }; }
-                   if (!element.blur) { element.blur = function() { /* console.log(`Polyfill blur for ${this.id || 'JSDOM element'}`); */ }; }
-                   if (element.tagName === 'SELECT') {
-                       if (!element.options) element.options = [];
-                       if (typeof element.add === 'undefined' && typeof element.appendChild === 'function') {
-                           element.add = function(optionElement) { this.appendChild(optionElement); if (Array.isArray(this.options)) { this.options.push(optionElement);}};
-                       }
-                   }
-                   return element;
-               } else { // Element IS NOT in indexHtmlMinimalContent, return comprehensive dummy
-                   // console.warn(`PackTests: getElementById for '${id}' returning comprehensive dummy.`);
-                   const dummyElement = {
-                       id: id, addEventListener: function(event, handler) {}, removeEventListener: function() {},
-                       classList: { add: function(){}, remove: function(){}, contains: function(){ return false; }, toggle: function() {} },
-                       style: { display: '' },
-                       dispatchEvent: function(event) { // Add dispatchEvent to dummy
-                           // console.warn(`Dummy dispatchEvent for ${this.id}`);
-                           return true;
-                       },
-                       focus: function() { /* console.log(`Dummy focus for ${this.id}`); */ }, // Add focus to dummy
-                       blur: function() { /* console.log(`Dummy blur for ${this.id}`); */ },   // Add blur to dummy
-                       querySelector: function(selector) { return null; }, querySelectorAll: function(selector) { return []; },
-                       value: '', checked: false, innerHTML: '', src: '',
-                       appendChild: function(child) { if (this.tagName === 'SELECT' && child.tagName === 'OPTION') { this.options.push(child); } return child; },
-                       removeChild: function(child) { return child; },
-                       firstElementChild: null, lastElementChild: null, children: [],
-                       options: [],
-                       reset: function() {}, submit: function() {},
-                       name: '', type: '',
-                       tagName: id.includes('select') ? 'SELECT' : (id.includes('section') ? 'SECTION' : id.includes('button') ? 'BUTTON' : 'DIV'),
-                       dataset: {}, parentNode: null, cloneNode: function() { return {...this}; }
-                   };
-                   if (dummyElement.tagName === 'SELECT') {
-                        dummyElement.add = function(optionElement) { this.options.push(optionElement); };
-                   }
-                   // Ensure click is also on dummy, it was missing from the original list of functions here
-                   if (typeof dummyElement.click === 'undefined') { dummyElement.click = function(){}; }
-                   return dummyElement;
-               }
-           };
+        // Reset history for all stubs AFTER loadData and BEFORE each test logic runs
+        showAlertStub.resetHistory();
+        confirmStub.resetHistory(); // Added confirmStub to reset
+        renderPacksStub.resetHistory();
+        updateViewFilterOptionsStub.resetHistory();
+        saveDataStub.resetHistory();
+        renderAllStub.resetHistory();
 
-           try {
-               dom.window.eval(appJsContent);
-               if (dom.window.module && dom.window.module.exports) {
-                   app = dom.window.module.exports;
-               } else {
-                   // Fallback for when module.exports isn't populated by app.js
-                   app = {
-                       addPack: dom.window.addPack, deletePack: dom.window.deletePack,
-                       addItemToPack: dom.window.addItemToPack, removeItemFromPack: dom.window.removeItemFromPack,
-                       // Ensure all potentially tested functions are here
-                       _getGlobalItems: (() => dom.window.items), _setGlobalItems: ((i) => { dom.window.items = i; }),
-                       _getGlobalPacks: (() => dom.window.packs), _setGlobalPacks: ((p) => { dom.window.packs = p; })
-                   };
-               }
-
-               // Ensure all functions needed by tests are on the 'app' object
-               if (!app.addPack && dom.window.addPack) app.addPack = dom.window.addPack;
-               if (!app.deletePack && dom.window.deletePack) app.deletePack = dom.window.deletePack;
-               if (!app.addItemToPack && dom.window.addItemToPack) app.addItemToPack = dom.window.addItemToPack;
-               if (!app.removeItemFromPack && dom.window.removeItemFromPack) app.removeItemFromPack = dom.window.removeItemFromPack;
+        // Reset history for other stubs created with sinon.stub(window, '...')
+        if(window.renderPackDetail.isSinonProxy) window.renderPackDetail.resetHistory();
+        if(window.updateCategoryDropdowns.isSinonProxy) window.updateCategoryDropdowns.resetHistory();
+        if(window.showSection.isSinonProxy) window.showSection.resetHistory();
+        if(window.renderItems.isSinonProxy) window.renderItems.resetHistory();
+        if(window.renderCategories.isSinonProxy) window.renderCategories.resetHistory();
+        if(window.renderCategoryManagement.isSinonProxy) window.renderCategoryManagement.resetHistory();
+        if(window.renderPackPacking.isSinonProxy) window.renderPackPacking.resetHistory();
+        if(window.renderListByView.isSinonProxy) window.renderListByView.resetHistory();
+        if(window.updateImagePreview.isSinonProxy) window.updateImagePreview.resetHistory();
+        if(window.fetch.isSinonProxy) window.fetch.resetHistory();
 
 
-               if (app && typeof app._setGlobalItems === 'function') {
-                   app._setGlobalItems([]); app._setGlobalPacks([]);
-               } else { global.window.items = []; global.window.packs = []; }
+    });
 
-           } catch (e) {
-               console.error("ERROR evaluating app.js in JSDOM for Pack tests:", e);
-               this.currentTest.emit('error', e);
-               if(this.skip) this.skip(); else throw e;
-           }
-       });
+    afterEach(function() {
+        sinon.restore(); // Restores all stubs and spies
+        global.console.log = originalConsoleLog;
+        global.console.error = originalConsoleError;
+        global.console.warn = originalConsoleWarn;
+    });
 
-   it('should add a new pack with a valid name', function() {
-       assert.ok(app && typeof app.addPack === 'function', 'addPack function is not available');
+    it('should add a new pack with a valid name', function() {
+        const packNameInput = global.document.getElementById('pack-name');
+        assert.ok(packNameInput, "Pack name input field should exist in DOM");
 
-       const packNameInputRef = global.document.getElementById('pack-name');
-       assert.ok(packNameInputRef, "pack-name input should exist");
+        const testPackName = "Valid Test Pack";
+        packNameInput.value = testPackName;
+        originalConsoleLog(`[TEST] Set pack-name input value to: "${packNameInput.value}"`);
 
-       packNameInputRef.focus();
-       packNameInputRef.value = 'Test Pack Debug Value'; // New distinct value
+        app.addPack();
 
-       // More elaborate event sequence
-       packNameInputRef.dispatchEvent(new global.window.Event('keydown', { bubbles: true }));
-       packNameInputRef.dispatchEvent(new global.window.Event('keypress', { bubbles: true }));
-       packNameInputRef.dispatchEvent(new global.window.Event('input', { bubbles: true }));
-       packNameInputRef.dispatchEvent(new global.window.Event('keyup', { bubbles: true }));
-       packNameInputRef.dispatchEvent(new global.window.Event('change', { bubbles: true }));
-       packNameInputRef.blur(); // Remove focus
+        const currentPacks = app.getPacks();
+        originalConsoleLog(`[TEST] Packs after addPack: ${JSON.stringify(currentPacks)}`);
+        originalConsoleLog(`[TEST] Captured app.js logs:\n${appJsLogs.join('\n')}`);
 
-       console.log('[TEST] Before app.addPack(): packNameInput.value =', packNameInputRef.value);
+        const packAdded = currentPacks.some(p => p.name === testPackName);
+        assert.ok(packAdded, `Pack "${testPackName}" should be added. Logs:\n${appJsLogs.join('\n')}`);
 
-       let appJsLogs = [];
-       const originalConsoleLog = global.window.console.log;
-       global.window.console.log = (...args) => {
-           appJsLogs.push(args.map(String).join(' '));
-       };
+        assert.ok(renderPacksStub.calledOnce, "renderPacks should have been called once");
+        assert.ok(updateViewFilterOptionsStub.calledOnce, "updateViewFilterOptions should have been called once");
+        assert.ok(saveDataStub.calledOnce, "saveData should have been called once");
+        // The original app.js calls alert for success, let's ensure it's NOT called for error
+        // and if it IS called, it's for success (though current app.js doesn't alert on success for addPack)
+        // Checking the diagnostic log from app.js for "packNameInput_local.value" can be helpful.
+        const addPackLog = appJsLogs.find(log => log.includes("[APP.JS ADD_PACK] packNameInput_local.value"));
+        assert.ok(addPackLog, "Diagnostic log from addPack was not found.");
+        assert.ok(addPackLog.includes(testPackName), "addPack diagnostic log should contain the test pack name.");
+    });
 
-       let renderPacksCalled = false; global.window.renderPacks = () => { renderPacksCalled = true;};
-       let updateViewFilterCalled = false; global.window.updateViewFilterOptions = () => { updateViewFilterCalled = true;};
-       let saveDataCalled = false; global.window.saveData = () => { saveDataCalled = true; };
-       let alertMessage = ''; global.window.alert = (msg) => { alertMessage = msg; console.log('[TEST] Alert was called with:', msg); };
+    it('should not add a pack if name is empty', function() {
+        const packNameInput = global.document.getElementById('pack-name');
+        assert.ok(packNameInput, "Pack name input field should exist for empty test");
+        packNameInput.value = ""; // Set input to empty
 
-       app.addPack();
+        const initialPacksCount = app.getPacks().length;
+        app.addPack();
 
-       global.window.console.log = originalConsoleLog;
+        assert.strictEqual(app.getPacks().length, initialPacksCount, "Pack count should remain the same");
+        assert.ok(showAlertStub.calledOnceWith('Veuillez entrer le nom du pack.'), "Alert for empty pack name not shown or message incorrect");
+        assert.ok(renderPacksStub.notCalled, "renderPacks should not be called on validation failure");
+        assert.ok(saveDataStub.notCalled, "saveData should not be called on validation failure");
+    });
 
-       if (appJsLogs.length > 0) {
-           console.log('\n--- Captured app.js Logs for addPack test ---');
-           appJsLogs.forEach(log => console.log(log));
-           console.log('--- End of Captured app.js Logs ---\n');
-       } else {
-           console.log('\n--- No logs captured from app.js for addPack test. ---');
-           console.log('    This might mean app.js did not log, or logging capture failed,');
-           console.log('    OR that the expected refactored app.js is not running.');
-           console.log('---\n');
-       }
+    it('should not add a pack if name contains only whitespace', function() {
+        const packNameInput = global.document.getElementById('pack-name');
+        assert.ok(packNameInput, "Pack name input field should exist for whitespace test");
+        packNameInput.value = "   "; // Set input to whitespace
 
-       console.log('[TEST] After app.addPack(): packNameInput.value (from test perspective) =', packNameInputRef.value);
-       if(alertMessage) console.log('[TEST] Alert message received:', alertMessage);
+        const initialPacksCount = app.getPacks().length;
+        app.addPack();
 
-       const packs = app._getGlobalPacks ? app._getGlobalPacks() : global.window.packs;
-       assert.strictEqual(alertMessage, '', 'Alert should not have been called. Packs found: ' + packs.length + '. app.js logs:\n' + appJsLogs.join('\n'));
-       assert.strictEqual(packs.length, 1, 'Pack array should have one pack.');
-       if (packs.length > 0) {
-           assert.strictEqual(packs[0].name, 'Test Pack Debug Value');
-           assert.ok(packs[0].id.startsWith('pack-'), 'Pack should have an ID starting with "pack-"');
-       }
-       assert.ok(renderPacksCalled, 'renderPacks should have been called');
-       assert.ok(updateViewFilterCalled, 'updateViewFilterOptions should have been called');
-       assert.ok(saveDataCalled, 'saveData should be called');
-   });
+        assert.strictEqual(app.getPacks().length, initialPacksCount, "Pack count should remain the same for whitespace name");
+        assert.ok(showAlertStub.calledOnceWith('Veuillez entrer le nom du pack.'), "Alert for whitespace pack name not shown or message incorrect");
+        assert.ok(renderPacksStub.notCalled, "renderPacks should not be called on validation failure for whitespace");
+        assert.ok(saveDataStub.notCalled, "saveData should not be called on validation failure for whitespace");
+    });
 
-       it('should not add a pack if name is empty', function() {
-           assert.ok(app && typeof app.addPack === 'function', 'addPack function is not available');
-           global.document.getElementById('pack-name').value = '';
+    it('should delete a pack and remove it from items', function() {
+        const packIdToDelete = 'pack123';
+        app.setPacks([{id: packIdToDelete, name: 'ToDelete'}]);
+        app.setItems([
+            { id: 'item1', name: 'Item In Pack', packIds: [packIdToDelete, 'otherPack'] },
+            { id: 'item2', name: 'Item Not In Pack', packIds: ['otherPack'] }
+        ]);
 
-           // Ensure alert mock for this test is on global.window (which is dom.window)
-           global.window.lastAlertMsg = ''; // Reset for this test
-           global.window.alert = (msg) => { global.window.lastAlertMsg = msg; };
+        confirmStub.returns(true); // Ensure confirm returns true for this test
 
-           let saveDataCalled = false;
-           global.window.saveData = () => { saveDataCalled = true; }; // Use global.window
+        app.deletePack(packIdToDelete);
 
-           app.addPack();
+        assert.strictEqual(app.getPacks().length, 0, 'Pack should be removed');
+        assert.ok(confirmStub.calledOnce, 'confirm should be called'); // Assumes one confirmation
+        assert.ok(renderAllStub.calledOnce, 'renderAll should be called');
+        assert.ok(saveDataStub.calledOnce, 'saveData should be called');
 
-           const packs = app._getGlobalPacks ? app._getGlobalPacks() : global.window.packs; // Use global.window
-           assert.strictEqual(packs.length, 0, 'No pack should be added');
-           assert.strictEqual(global.window.lastAlertMsg, 'Veuillez entrer le nom du pack.'); // Check alert message via global.window
-           assert.strictEqual(saveDataCalled, false, 'saveData should not be called on validation failure');
-       });
+        const currentItems = app.getItems();
+        assert.deepStrictEqual(currentItems[0].packIds, ['otherPack'], 'Pack ID should be removed from item1');
+        assert.deepStrictEqual(currentItems[1].packIds, ['otherPack'], 'item2 packIds should be unchanged');
+    });
 
-       it('should delete a pack and remove it from items', function() {
-           assert.ok(app && typeof app.deletePack === 'function', 'deletePack function is not available');
-           const packIdToDelete = 'pack123';
-           if(app && app._setGlobalPacks) app._setGlobalPacks([{id: packIdToDelete, name: 'ToDelete'}]); else global.window.packs = [{id: packIdToDelete, name: 'ToDelete'}]; // Use global.window
-           const initialItems = [
-               { id: 'item1', name: 'Item In Pack', packIds: [packIdToDelete, 'otherPack'] },
-               { id: 'item2', name: 'Item Not In Pack', packIds: ['otherPack'] }
-           ];
-           if(app && app._setGlobalItems) app._setGlobalItems(initialItems); else global.window.items = initialItems; // Use global.window
+    it('should add an item to a pack', function() {
+        const packId = 'p1'; const itemId = 'i1';
+        app.setPacks([{id: packId, name: 'My Pack'}]);
+        app.setItems([{id: itemId, name: 'My Item', packIds: []}]);
 
-           let confirmCalled = false;
-           global.window.confirm = (msg) => { // Use global.window
-               confirmCalled = true;
-               return true;
-           };
-           let renderAllCalled = false; global.window.renderAll = () => { renderAllCalled = true; }; // Use global.window
-           let saveDataCalled = false; global.window.saveData = () => { saveDataCalled = true; }; // Use global.window
+        app.addItemToPack(itemId, packId);
 
-           app.deletePack(packIdToDelete);
+        const currentItems = app.getItems();
+        assert.ok(currentItems[0].packIds.includes(packId), 'Item should have packId');
+        // renderPackDetail is stubbed on window, so check window.renderPackDetail
+        assert.ok(window.renderPackDetail.calledOnceWith(packId), 'renderPackDetail should be called with packId');
+        assert.ok(renderAllStub.calledOnce, 'renderAll should be called'); // addItemToPack calls renderAll
+        assert.ok(saveDataStub.calledOnce, 'saveData should be called');
+    });
 
-           const packs = app._getGlobalPacks ? app._getGlobalPacks() : global.window.packs; // Use global.window
-           const items = app._getGlobalItems ? app._getGlobalItems() : global.window.items; // Use global.window
-           assert.strictEqual(packs.length, 0, 'Pack should be removed');
-           assert.ok(confirmCalled, 'confirm should be called');
-           assert.ok(renderAllCalled, 'renderAll should be called');
-           assert.ok(saveDataCalled, 'saveData should be called');
-           assert.deepStrictEqual(items[0].packIds, ['otherPack'], 'Pack ID should be removed from item1');
-           assert.deepStrictEqual(items[1].packIds, ['otherPack'], 'item2 packIds should be unchanged');
-       });
+    it('should remove an item from a pack and unpack it', function() {
+        const packId = 'p1'; const itemId = 'i1';
+        app.setPacks([{id: packId, name: 'My Pack'}]);
+        app.setItems([{id: itemId, name: 'My Item', packIds: [packId], packed: true}]);
 
-       it('should add an item to a pack', function() {
-           assert.ok(app && typeof app.addItemToPack === 'function', 'addItemToPack is not available');
-           const packId = 'p1'; const itemId = 'i1';
-           if(app && app._setGlobalPacks) app._setGlobalPacks([{id: packId, name: 'My Pack'}]); else global.window.packs = [{id: packId, name: 'My Pack'}]; // Use global.window
-           if(app && app._setGlobalItems) app._setGlobalItems([{id: itemId, name: 'My Item', packIds: []}]); else global.window.items = [{id: itemId, name: 'My Item', packIds: []}]; // Use global.window
+        app.removeItemFromPack(itemId, packId);
 
-           let renderPackDetailCalled = false; global.window.renderPackDetail = (pid) => { assert.strictEqual(pid, packId); renderPackDetailCalled = true; }; // Use global.window
-           let renderAllCalled = false; global.window.renderAll = () => { renderAllCalled = true; }; // Use global.window
-           let saveDataCalled = false; global.window.saveData = () => { saveDataCalled = true; }; // Use global.window
-
-           app.addItemToPack(itemId, packId);
-
-           const items = app._getGlobalItems ? app._getGlobalItems() : global.window.items; // Use global.window
-           assert.ok(items[0].packIds.includes(packId), 'Item should have packId');
-           assert.ok(renderPackDetailCalled, 'renderPackDetail should be called');
-           assert.ok(renderAllCalled, 'renderAll should be called');
-           assert.ok(saveDataCalled, 'saveData should be called');
-       });
-
-       it('should remove an item from a pack and unpack it', function() {
-           assert.ok(app && typeof app.removeItemFromPack === 'function', 'removeItemFromPack is not available');
-           const packId = 'p1'; const itemId = 'i1';
-           if(app && app._setGlobalPacks) app._setGlobalPacks([{id: packId, name: 'My Pack'}]); else global.window.packs = [{id: packId, name: 'My Pack'}]; // Use global.window
-           if(app && app._setGlobalItems) app._setGlobalItems([{id: itemId, name: 'My Item', packIds: [packId], packed: true}]); else global.window.items = [{id: itemId, name: 'My Item', packIds: [packId], packed: true}]; // Use global.window
-
-           let renderPackDetailCalled = false; global.window.renderPackDetail = (pid) => { assert.strictEqual(pid, packId); renderPackDetailCalled = true; }; // Use global.window
-           let renderAllCalled = false; global.window.renderAll = () => { renderAllCalled = true; }; // Use global.window
-           let saveDataCalled = false; global.window.saveData = () => { saveDataCalled = true; }; // Use global.window
-
-           app.removeItemFromPack(itemId, packId);
-
-           const items = app._getGlobalItems ? app._getGlobalItems() : global.window.items; // Use global.window
-           assert.strictEqual(items[0].packIds.includes(packId), false, 'Item should not have packId');
-           assert.strictEqual(items[0].packed, false, 'Item should be unpacked');
-           assert.ok(renderPackDetailCalled, 'renderPackDetail should be called');
-           assert.ok(renderAllCalled, 'renderAll should be called');
-           assert.ok(saveDataCalled, 'saveData should be called');
-       });
-   });
+        const currentItems = app.getItems();
+        assert.strictEqual(currentItems[0].packIds.includes(packId), false, 'Item should not have packId');
+        assert.strictEqual(currentItems[0].packed, false, 'Item should be unpacked');
+        assert.ok(window.renderPackDetail.calledOnceWith(packId), 'renderPackDetail should be called with packId');
+        assert.ok(renderAllStub.calledOnce, 'renderAll should be called'); // removeItemFromPack calls renderAll
+        assert.ok(saveDataStub.calledOnce, 'saveData should be called');
+    });
+});
