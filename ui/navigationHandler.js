@@ -84,7 +84,9 @@
                     if (global.navigationHandler) global.navigationHandler.showSection('manage-packs-section');
                 }
             } else if (sectionId === 'manage-categories-section') {
-                if (typeof global.renderCategoryManagement === 'function') global.renderCategoryManagement(); // TODO: Refactor to this.categoryDisplay
+                if (this.categoryDisplay && typeof this.categoryDisplay.renderCategoryManagement === 'function') {
+                    this.categoryDisplay.renderCategoryManagement();
+                }
             } else if (sectionId === 'generate-pack-section') {
                 const generatedItemsListElement = document.getElementById('generated-items-list'); // Temporary
                 const generatedPackResultsDiv = document.getElementById('generated-pack-results'); // Temporary

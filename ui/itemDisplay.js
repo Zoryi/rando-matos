@@ -20,6 +20,33 @@
             if (this.viewFilterSelect) {
                 this.viewFilterSelect.addEventListener('change', () => this.renderListByView());
             }
+
+            if (this.itemListElement) {
+                this.itemListElement.addEventListener('click', (event) => {
+                    const target = event.target;
+                    const itemId = target.dataset.itemId;
+
+                    if (target.classList.contains('edit-button') && itemId) {
+                        if (global.modalHandler && typeof global.modalHandler.openEditModal === 'function') {
+                            global.modalHandler.openEditModal(itemId);
+                        } else {
+                            console.error("ModalHandler not available to open edit modal.");
+                        }
+                    } else if (target.classList.contains('delete-button') && itemId) {
+                        if (this.itemService && typeof this.itemService.deleteItem === 'function') {
+                            if (this.itemService.deleteItem(itemId, window.confirm)) {
+                                // Re-render the current view. renderListByView handles different views.
+                                this.renderListByView();
+                                // Also, if other parts of the app need full re-render (e.g. pack weights, category counts)
+                                // and if renderListByView doesn't trigger that indirectly.
+                                if (global.renderAll) global.renderAll();
+                            }
+                        } else {
+                            console.error("itemService.deleteItem is not available.");
+                        }
+                    }
+                });
+            }
         }
 
         // Moved from app.js - Renders items based on a filter or all items
@@ -62,6 +89,7 @@
                         </div>
                         <div class="item-actions">
                             <button class="edit-button" data-item-id="${item.id}">Modifier</button>
+                            <button class="delete-button" data-item-id="${item.id}">Supprimer</button>
                         </div>`;
                     this.itemListElement.appendChild(listItem);
                     currentListTotalWeight += itemWeight;
@@ -140,6 +168,7 @@
                         </div>
                         <div class="item-actions">
                             <button class="edit-button" data-item-id="${item.id}">Modifier</button>
+                            <button class="delete-button" data-item-id="${item.id}">Supprimer</button>
                         </div>`;
                     this.itemListElement.appendChild(listItem);
                 });
@@ -197,6 +226,7 @@
                             </div>
                             <div class="item-actions">
                                  <button class="edit-button" data-item-id="${item.id}">Modifier</button>
+                                 <button class="delete-button" data-item-id="${item.id}">Supprimer</button>
                             </div>`;
                         this.itemListElement.appendChild(listItem);
                     });
