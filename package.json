@@ -1,0 +1,10 @@
+{
+  "scripts": {
+    "test:qunit": "node run-playwright-qunit.js",
+    "test": "mocha"
+  },
+  "devDependencies": {
+    "jsdom": "^26.1.0",
+    "mocha": "^11.6.0"
+  }
+}

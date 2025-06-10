@@ -76,17 +76,17 @@
 
 
         // Arrays to store items, packs, and explicitly created categories
-        let items = [];
-        let packs = []; // [{ id: 'pack-id-1', name: 'Nom du Pack' }]
-        let categories = []; // New array for explicitly created categories [{ name: 'Nom Catégorie' }]
+        window.items = [];
+        window.packs = []; // [{ id: 'pack-id-1', name: 'Nom du Pack' }]
+        window.categories = []; // New array for explicitly created categories [{ name: 'Nom Catégorie' }]
         let currentView = 'all'; // 'all', 'categories', 'pack-{packId}'
-        let currentManagingPackId = null; // Store the ID of the pack being managed
+        window.currentManagingPackId = null; // Store the ID of the pack being managed - MAKE GLOBAL FOR TESTS
 
         // Function to save data to local storage
         function saveData() {
-            localStorage.setItem('backpackItems', JSON.stringify(items));
-            localStorage.setItem('backpackPacks', JSON.stringify(packs));
-            localStorage.setItem('backpackCategories', JSON.stringify(categories)); // Save categories
+            localStorage.setItem('backpackItems', JSON.stringify(window.items));
+            localStorage.setItem('backpackPacks', JSON.stringify(window.packs));
+            localStorage.setItem('backpackCategories', JSON.stringify(window.categories)); // Save categories
         }
 
         // Function to load data from local storage
@@ -96,9 +96,9 @@
             const storedCategories = localStorage.getItem('backpackCategories'); // Load categories
 
             if (storedItems && JSON.parse(storedItems).length > 0) { // Check if items exist and are not empty
-                items = JSON.parse(storedItems);
+                window.items = JSON.parse(storedItems);
                  // Ensure packIds is an array for older data
-                 items.forEach(item => {
+                 window.items.forEach(item => {
                      if (!item.packIds) {
                          item.packIds = item.packId ? [item.packId] : [];
                          delete item.packId; // Remove old property
@@ -106,7 +106,7 @@
                  });
             } else {
                 // Pre-fill with example data if no items are found
-                items = [
+                window.items = [
                     { id: 'item-1', name: 'Tente 2P MSR Hubba Hubba', weight: 1300, brand: 'MSR', category: 'Camping', tags: ['bivouac', 'léger'], capacity: '2 personnes', imageUrl: 'https://placehold.co/50x50/aabbcc/ffffff?text=Tente', isConsumable: false, packIds: [], packed: false },
                     { id: 'item-2', name: 'Sac de couchage -5°C', weight: 900, brand: 'Decathlon', category: 'Camping', tags: ['chaud'], capacity: 'N/A', imageUrl: 'https://placehold.co/50x50/ccbbaa/ffffff?text=Couchage', isConsumable: false, packIds: [], packed: false },
                     { id: 'item-3', name: 'Réchaud à gaz MSR PocketRocket', weight: 73, brand: 'MSR', category: 'Cuisine', tags: ['léger', 'gaz'], capacity: 'N/A', imageUrl: 'https://placehold.co/50x50/aaccee/ffffff?text=Réchaud', isConsumable: false, packIds: [], packed: false },
@@ -121,35 +121,35 @@
             }
 
             if (storedPacks && JSON.parse(storedPacks).length > 0) { // Check if packs exist and are not empty
-                packs = JSON.parse(storedPacks);
+                window.packs = JSON.parse(storedPacks);
             } else {
                 // Pre-fill with example packs
-                packs = [
+                window.packs = [
                     { id: 'pack-trek-ete', name: 'Pack Trek Été' },
                     { id: 'pack-weekend-ski', name: 'Pack Week-end Ski' },
                     { id: 'pack-camping-base', name: 'Pack Camping Base' }
                 ];
 
                 // Assign some initial items to packs
-                if(items.find(item => item.id === 'item-1')) items.find(item => item.id === 'item-1').packIds.push('pack-trek-ete', 'pack-camping-base'); // Tente 2P
-                if(items.find(item => item.id === 'item-2')) items.find(item => item.id === 'item-2').packIds.push('pack-trek-ete'); // Sac de couchage
-                if(items.find(item => item.id === 'item-3')) items.find(item => item.id === 'item-3').packIds.push('pack-trek-ete', 'pack-camping-base'); // Réchaud
-                if(items.find(item => item.id === 'item-4')) items.find(item => item.id === 'item-4').packIds.push('pack-trek-ete'); // Popote
-                if(items.find(item => item.id === 'item-5')) items.find(item => item.id === 'item-5').packIds.push('pack-trek-ete', 'pack-weekend-ski'); // Veste Pluie
-                if(items.find(item => item.id === 'item-6')) items.find(item => item.id === 'item-6').packIds.push('pack-trek-ete', 'pack-camping-base', 'pack-weekend-ski'); // Frontale
-                if(items.find(item => item.id === 'item-9')) items.find(item => item.id === 'item-9').packIds.push('pack-trek-ete'); // Barres énergétiques
+                if(window.items.find(item => item.id === 'item-1')) window.items.find(item => item.id === 'item-1').packIds.push('pack-trek-ete', 'pack-camping-base'); // Tente 2P
+                if(window.items.find(item => item.id === 'item-2')) window.items.find(item => item.id === 'item-2').packIds.push('pack-trek-ete'); // Sac de couchage
+                if(window.items.find(item => item.id === 'item-3')) window.items.find(item => item.id === 'item-3').packIds.push('pack-trek-ete', 'pack-camping-base'); // Réchaud
+                if(window.items.find(item => item.id === 'item-4')) window.items.find(item => item.id === 'item-4').packIds.push('pack-trek-ete'); // Popote
+                if(window.items.find(item => item.id === 'item-5')) window.items.find(item => item.id === 'item-5').packIds.push('pack-trek-ete', 'pack-weekend-ski'); // Veste Pluie
+                if(window.items.find(item => item.id === 'item-6')) window.items.find(item => item.id === 'item-6').packIds.push('pack-trek-ete', 'pack-camping-base', 'pack-weekend-ski'); // Frontale
+                if(window.items.find(item => item.id === 'item-9')) window.items.find(item => item.id === 'item-9').packIds.push('pack-trek-ete'); // Barres énergétiques
 
                 // Mark some items as packed
-                if(items.find(item => item.id === 'item-1')) items.find(item => item.id === 'item-1').packed = true;
-                if(items.find(item => item.id === 'item-3')) items.find(item => item.id === 'item-3').packed = true;
-                if(items.find(item => item.id === 'item-6')) items.find(item => item.id === 'item-6').packed = true;
+                if(window.items.find(item => item.id === 'item-1')) window.items.find(item => item.id === 'item-1').packed = true;
+                if(window.items.find(item => item.id === 'item-3')) window.items.find(item => item.id === 'item-3').packed = true;
+                if(window.items.find(item => item.id === 'item-6')) window.items.find(item => item.id === 'item-6').packed = true;
             }
 
             if (storedCategories && JSON.parse(storedCategories).length > 0) { // Check if categories exist and are not empty
-                 categories = JSON.parse(storedCategories); // Parse loaded categories
+                 window.categories = JSON.parse(storedCategories); // Parse loaded categories
             } else {
                  // Pre-fill with example categories
-                 categories = [
+                 window.categories = [
                      { name: 'Camping' },
                      { name: 'Cuisine' },
                      { name: 'Vêtements' },
@@ -169,12 +169,12 @@
         function renderPacks() {
             packListElement.innerHTML = '';
 
-            if (packs.length === 0) {
+            if (window.packs.length === 0) {
                 packListElement.innerHTML = '<li class="text-center text-gray-500">Aucun pack créé.</li>';
             } else {
-                 packs.forEach(pack => {
+                 window.packs.forEach(pack => {
                     // Calculate weight for items whose packIds array includes this pack's ID
-                    const packItems = items.filter(item => item.packIds && item.packIds.includes(pack.id));
+                    const packItems = window.items.filter(item => item.packIds && item.packIds.includes(pack.id));
                     const packWeight = packItems.reduce((sum, item) => sum + (parseFloat(item.weight) || 0), 0);
                     const packedWeight = packItems.filter(item => item.packed).reduce((sum, item) => sum + (parseFloat(item.weight) || 0), 0); // Calculate packed weight
                     const packProgress = packWeight > 0 ? (packedWeight / packWeight) * 100 : 0; // Progress based on weight
@@ -207,7 +207,7 @@
         }
 
         // Function to render the item list based on the current view
-        function renderItems(filteredItems = items) {
+        function renderItems(filteredItems = window.items) { // Default to window.items
             itemListElement.innerHTML = ''; // Clear current list
             let totalWeight = 0;
 
@@ -223,7 +223,7 @@
 
                     // Calculate item weight percentage for the bar graph (relative to total weight)
                     const itemWeight = parseFloat(item.weight) || 0;
-                    const total = items.reduce((sum, item) => sum + (parseFloat(item.weight) || 0), 0);
+                    const total = window.items.reduce((sum, item) => sum + (parseFloat(item.weight) || 0), 0);
                     // For individual items, the bar represents their weight relative to the total inventory weight
                     const weightPercentage = total > 0 ? (itemWeight / total) * 100 : 0;
 
@@ -272,13 +272,13 @@
         function renderCategories() {
              itemListElement.innerHTML = ''; // Clear current list
              // Get unique categories with items, including items with no category
-             const categoriesWithItems = [...new Set(items.map(item => item.category || 'Sans catégorie'))];
+             const categoriesWithItems = [...new Set(window.items.map(item => item.category || 'Sans catégorie'))];
 
              if (categoriesWithItems.length === 0) {
                  itemListElement.innerHTML = '<li class="text-center text-gray-500">Aucune catégorie avec des items.</li>';
              } else {
                  categoriesWithItems.forEach(category => {
-                    const itemsInCategory = items.filter(item => (item.category || 'Sans catégorie') === category);
+                    const itemsInCategory = window.items.filter(item => (item.category || 'Sans catégorie') === category);
                     const categoryWeight = itemsInCategory.reduce((sum, item) => sum + (parseFloat(item.weight) || 0), 0);
                     const packedWeightInCategory = itemsInCategory.filter(item => item.packed).reduce((sum, item) => sum + (parseFloat(item.weight) || 0), 0); // Calculate packed weight in category
                      const categoryProgress = categoryWeight > 0 ? (packedWeightInCategory / categoryWeight) * 100 : 0; // Progress based on weight
@@ -340,7 +340,7 @@
              }
 
              // Update total weight display (still show total backpack weight)
-             const totalWeight = items.reduce((sum, item) => sum + (parseFloat(item.weight) || 0), 0);
+             const totalWeight = window.items.reduce((sum, item) => sum + (parseFloat(item.weight) || 0), 0);
              totalWeightElement.textContent = `Poids Total : ${totalWeight} g`;
              inventoryWeightElement.textContent = `(${totalWeight} g)`;
 
@@ -353,12 +353,12 @@
         function renderCategoryManagement() {
             categoryManagementListElement.innerHTML = ''; // Clear current list
 
-            if (categories.length === 0) {
+            if (window.categories.length === 0) {
                 categoryManagementListElement.innerHTML = '<li class="text-center text-gray-500">Aucune catégorie créée. Utilisez le champ ci-dessus pour en ajouter.</li>';
             } else {
-                categories.forEach(category => {
+                window.categories.forEach(category => {
                     // Find items assigned to this explicit category
-                    const itemsInCategory = items.filter(item => item.category === category.name);
+                    const itemsInCategory = window.items.filter(item => item.category === category.name);
                     const itemCount = itemsInCategory.length;
 
                     const categoryHeader = document.createElement('li');
@@ -426,14 +426,14 @@
             }
 
             // Check if category already exists (case-insensitive)
-            if (categories.some(cat => cat.name.toLowerCase() === categoryName.toLowerCase())) {
+            if (window.categories.some(cat => cat.name.toLowerCase() === categoryName.toLowerCase())) {
                 alert(`La catégorie "${categoryName}" existe déjà.`);
                 return;
             }
 
             // Add category to the array
-            categories.push({ name: categoryName });
-            console.log('Categories after add:', categories); // Debugging line
+            window.categories.push({ name: categoryName });
+            console.log('Categories after add:', window.categories); // Debugging line
 
             // Clear input field
             categoryNameInput.value = '';
@@ -446,14 +446,14 @@
         // Function to delete a category
         function deleteCategory(categoryName) {
              // Ask for confirmation if the category contains items
-             const itemsInCategory = items.filter(item => item.category === categoryName);
+             const itemsInCategory = window.items.filter(item => item.category === categoryName);
              if (itemsInCategory.length > 0) {
                  const confirmDelete = confirm(`La catégorie "${categoryName}" contient ${itemsInCategory.length} item(s). Voulez-vous vraiment la supprimer ? Les items ne seront pas supprimés de votre inventaire mais leur catégorie sera effacée.`);
                  if (!confirmDelete) {
                      return; // Stop if user cancels
                  }
                  // Remove the category from items that were in this category
-                 items = items.map(item => {
+                 window.items = window.items.map(item => {
                      if (item.category === categoryName) {
                          item.category = ''; // Clear the category
                      }
@@ -468,7 +468,7 @@
              }
 
             // Filter out the category
-            categories = categories.filter(cat => cat.name !== categoryName);
+            window.categories = window.categories.filter(cat => cat.name !== categoryName);
 
             // Re-render everything
             renderAll();
@@ -487,7 +487,7 @@
                 selectElement.innerHTML = '<option value="">-- Sélectionner une Catégorie --</option>';
 
                 // Add categories from the 'categories' array
-                categories.forEach(category => {
+                window.categories.forEach(category => {
                     const option = document.createElement('option');
                     option.value = category.name;
                     option.textContent = category.name;
@@ -507,14 +507,14 @@
 
         // Function to render items within a specific pack for packing view
         function renderPackPacking(packId) {
-            const pack = packs.find(p => p.id === packId);
+            const pack = window.packs.find(p => p.id === packId);
             if (!pack) return;
 
             packingPackNameElement.textContent = `Emballage du Pack : ${pack.name}`;
             packPackingListElement.innerHTML = '';
 
             // Filter items that belong to this pack
-            const itemsInPack = items.filter(item => item.packIds && item.packIds.includes(packId));
+            const itemsInPack = window.items.filter(item => item.packIds && item.packIds.includes(packId));
 
 
             if (itemsInPack.length === 0) {
@@ -537,8 +537,8 @@
 
         // Function to render the pack detail view
         function renderPackDetail(packId) {
-             currentManagingPackId = packId; // Set the currently managed pack ID
-             const pack = packs.find(p => p.id === packId);
+             window.currentManagingPackId = packId; // Set the currently managed pack ID
+             const pack = window.packs.find(p => p.id === packId);
              if (!pack) {
                  // If pack not found, maybe show pack list again or an error
                  showSection('manage-packs-section');
@@ -549,13 +549,13 @@
              itemsInPackList.innerHTML = '';
              availableItemsList.innerHTML = '';
 
-             const itemsInThisPack = items.filter(item => item.packIds && item.packIds.includes(packId));
+             const itemsInThisPack = window.items.filter(item => item.packIds && item.packIds.includes(packId));
              // CORRECTED FILTERING LOGIC: Filter items that DO NOT have the current packId in their packIds array
-             const availableItems = items.filter(item => !item.packIds || !item.packIds.includes(packId));
+             const availableItems = window.items.filter(item => !item.packIds || !item.packIds.includes(packId));
 
 
              const packTotalWeight = itemsInThisPack.reduce((sum, item) => sum + (parseFloat(item.weight) || 0), 0);
-             const totalInventoryWeight = items.reduce((sum, item) => sum + (parseFloat(item.weight) || 0), 0);
+             const totalInventoryWeight = window.items.reduce((sum, item) => sum + (parseFloat(item.weight) || 0), 0);
 
 
              if (itemsInThisPack.length === 0) {
@@ -625,12 +625,12 @@
              currentView = selectedView; // Update current view state
 
              if (selectedView === 'all') {
-                 renderItems(items); // Render all items
+                 renderItems(window.items); // Render all items
              } else if (selectedView === 'categories') {
                  renderCategories(); // Render grouped by category
              } else if (selectedView.startsWith('pack-')) {
                  const packId = selectedView.substring(5); // Extract pack ID
-                 const itemsInPack = items.filter(item => item.packIds && item.packIds.includes(packId));
+                 const itemsInPack = window.items.filter(item => item.packIds && item.packIds.includes(packId));
                  // For pack view, render items within that pack, and the bar represents their weight relative to the pack's total weight
                  const packTotalWeight = itemsInPack.reduce((sum, item) => sum + (parseFloat(item.weight) || 0), 0);
                  itemListElement.innerHTML = ''; // Clear current list
@@ -672,7 +672,7 @@
                  }
 
                  // Update total weight display (still show total backpack weight)
-                 const totalWeight = items.reduce((sum, item) => sum + (parseFloat(item.weight) || 0), 0);
+                 const totalWeight = window.items.reduce((sum, item) => sum + (parseFloat(item.weight) || 0), 0);
                  totalWeightElement.textContent = `Poids Total : ${totalWeight} g`;
                  inventoryWeightElement.textContent = `(${totalWeight} g)`;
 
@@ -686,7 +686,7 @@
              viewFilterSelect.querySelectorAll('option[value^="pack-"]').forEach(option => option.remove());
 
              // Add current packs as view options
-             packs.forEach(pack => {
+             window.packs.forEach(pack => {
                  const option = document.createElement('option');
                  option.value = `pack-${pack.id}`;
                  option.textContent = `Voir Pack : ${pack.name}`;
@@ -740,7 +740,7 @@
             const itemId = Date.now().toString(); // Simple timestamp based ID
 
             // Add item to the array
-            items.push({
+            const newItem = {
                 id: itemId,
                 name: name,
                 weight: weight,
@@ -752,7 +752,8 @@
                 isConsumable: isConsumable,
                 packIds: packIds, // Use the array
                 packed: false // Initially not packed
-            });
+            };
+            window.items.push(newItem); // Restored .push, assuming previous window.items = [] was the issue
 
             // Clear input fields
             newItemNameInput.value = '';
@@ -766,7 +767,7 @@
             newItemImagePreview.style.display = 'none'; // Hide preview after adding
 
             // Re-render everything
-            renderAll();
+            window.renderAll(); // Call via window
         }
 
         // Function to add a new pack
@@ -783,31 +784,32 @@
             const packId = `pack-${Date.now()}`; // Simple timestamp based ID
 
             // Add pack to the array
-            packs.push({ id: packId, name: packName });
+            const newPack = { id: packId, name: packName };
+            window.packs.push(newPack); // Restored .push
             console.log('Packs after add:', packs); // Debugging line
 
             // Clear input field
             packNameInput.value = '';
 
             // Re-render packs and update item select/view filter
-            renderPacks();
-             updateViewFilterOptions();
-             saveData(); // Save data
+            window.renderPacks(); // Call via window
+             window.updateViewFilterOptions(); // Call via window
+             window.saveData(); // Call via window (assuming it's on window from previous step)
         }
 
 
         // Function to toggle packed status for an item
         function togglePacked(itemId) {
-            const item = items.find(item => item.id === itemId);
+            const item = window.items.find(item => item.id === itemId);
             if (item) {
                 item.packed = !item.packed;
-                 renderAll(); // Re-render everything to update status and weights
+                 window.renderAll(); // Call via window
             }
         }
 
         // Function to toggle packed status for an item within the packing modal
          function togglePackItemPacked(itemId) {
-             const item = items.find(item => item.id === itemId);
+             const item = window.items.find(item => item.id === itemId);
              if (item) {
                  item.packed = !item.packed;
                  saveData(); // Save immediately
@@ -820,19 +822,19 @@
         // Function to delete an item
         function deleteItem(itemId) {
             // Use native confirm for item deletion from inventory or category management
-            const confirmDelete = confirm(`Voulez-vous vraiment supprimer l'item "${items.find(item => item.id === itemId)?.name || 'Inconnu'}" de votre inventaire ?`);
+            const confirmDelete = confirm(`Voulez-vous vraiment supprimer l'item "${window.items.find(item => item.id === itemId)?.name || 'Inconnu'}" de votre inventaire ?`);
             if (!confirmDelete) {
                 return; // Stop if user cancels
             }
-            items = items.filter(item => item.id !== itemId); // Filter out the item
-            renderAll(); // Re-render everything
-            saveData(); // Save data
+            window.items = window.items.filter(item => item.id !== itemId); // Filter out the item
+            window.renderAll(); // Call via window
+            window.saveData(); // Call via window
         }
 
         // Function to delete a pack
         function deletePack(packId) {
              // Ask for confirmation if the pack contains items
-             const itemsInPack = items.filter(item => item.packIds && item.packIds.includes(packId));
+             const itemsInPack = window.items.filter(item => item.packIds && item.packIds.includes(packId));
              if (itemsInPack.length > 0) {
                  // Use native confirm for pack deletion with items
                  const confirmDelete = confirm(`Ce pack contient ${itemsInPack.length} item(s). Voulez-vous vraiment le supprimer ? Les items ne seront pas supprimés de votre inventaire mais retirés de ce pack.`);
@@ -840,7 +842,7 @@
                      return; // Stop if user cancels
                  }
                  // Remove packId from items that were in this pack
-                 items = items.map(item => {
+                 window.items = window.items.map(item => {
                      if (item.packIds && item.packIds.includes(packId)) {
                          item.packIds = item.packIds.filter(id => id !== packId); // Remove the packId
                      }
@@ -848,37 +850,37 @@
                  });
              } else {
                  // No items, just confirm deletion
-                 const confirmDelete = confirm(`Voulez-vous vraiment supprimer le pack "${packs.find(p => p.id === packId)?.name || 'Inconnu'}" ?`);
+                 const confirmDelete = confirm(`Voulez-vous vraiment supprimer le pack "${window.packs.find(p => p.id === packId)?.name || 'Inconnu'}" ?`);
                  if (!confirmDelete) {
                      return; // Stop if user cancels
                  }
              }
 
-            packs = packs.filter(pack => pack.id !== packId); // Filter out the pack
-            renderAll(); // Re-render everything
-            saveData(); // Save data
+            window.packs = window.packs.filter(pack => pack.id !== packId); // Filter out the pack
+            window.renderAll(); // Call via window
+            window.saveData(); // Call via window
         }
 
         // Function to add an item to a pack
         function addItemToPack(itemId, packId) {
-            const item = items.find(item => item.id === itemId);
+            const item = window.items.find(item => item.id === itemId);
             if (item && item.packIds && !item.packIds.includes(packId)) {
                 item.packIds.push(packId); // Add pack ID to the array
-                renderPackDetail(packId); // Re-render pack detail page
-                renderAll(); // Re-render everything to update weights/progress
-                saveData(); // Save data
+                window.renderPackDetail(packId); // Call via window
+                window.renderAll(); // Call via window
+                window.saveData(); // Call via window
             }
         }
 
         // Function to remove an item from a pack
         function removeItemFromPack(itemId, packId) {
-             const item = items.find(item => item.id === itemId);
+             const item = window.items.find(item => item.id === itemId);
              if (item && item.packIds && item.packIds.includes(packId)) {
                  item.packIds = item.packIds.filter(id => id !== packId); // Remove pack ID from the array
                  item.packed = false; // Ensure item is unpacked when removed from pack
-                 renderPackDetail(packId); // Re-render pack detail page
-                 renderAll(); // Re-render everything to update weights/progress
-                 saveData(); // Save data
+                 window.renderPackDetail(packId); // Call via window
+                 window.renderAll(); // Call via window
+                 window.saveData(); // Call via window
              }
         }
 
@@ -917,8 +919,8 @@
                  updateImagePreview(newItemImageUrlInput.value, newItemImagePreview); // Update preview when showing new item form
              } else if (sectionId === 'manage-packs-section') {
                  renderPacks(); // Ensure pack list is up-to-date
-             } else if (sectionId === 'pack-detail-section' && currentManagingPackId) {
-                 renderPackDetail(currentManagingPackId); // Render the details of the currently managed pack
+             } else if (sectionId === 'pack-detail-section' && window.currentManagingPackId) {
+                 renderPackDetail(window.currentManagingPackId); // Render the details of the currently managed pack
              } else if (sectionId === 'manage-categories-section') {
                  renderCategoryManagement(); // Render the category management page
              } else if (sectionId === 'generate-pack-section') {
@@ -930,7 +932,7 @@
 
         // Function to open the edit item modal and populate it
         function openEditModal(itemId) {
-            const itemToEdit = items.find(item => item.id === itemId);
+            const itemToEdit = window.items.find(item => item.id === itemId);
             if (!itemToEdit) return;
 
             // Populate the edit form fields
@@ -960,7 +962,7 @@
         // Function to save the edited item
         function saveEditedItem() {
             const itemId = editingItemIdInput.value;
-            const itemIndex = items.findIndex(item => item.id === itemId);
+            const itemIndex = window.items.findIndex(item => item.id === itemId);
 
             if (itemIndex === -1) {
                 alert('Item not found.'); // Should not happen if modal is opened correctly
@@ -989,8 +991,8 @@
 
 
             // Update the item in the array
-            items[itemIndex] = {
-                ...items[itemIndex], // Keep existing properties like 'packed' and 'packIds'
+            window.items[itemIndex] = {
+                ...window.items[itemIndex], // Keep existing properties like 'packed' and 'packIds'
                 id: itemId, // Ensure ID is kept
                 name: updatedName,
                 weight: updatedWeight,
@@ -1008,16 +1010,16 @@
             editItemImagePreview.style.display = 'none'; // Hide preview after saving
 
             // Re-render everything to reflect changes
-            renderAll();
+            window.renderAll(); // Call via window
              // If currently on pack detail page, re-render it
-             if (currentManagingPackId && document.getElementById('pack-detail-section').classList.contains('active')) {
-                 renderPackDetail(currentManagingPackId);
+             if (window.currentManagingPackId && document.getElementById('pack-detail-section').classList.contains('active')) {
+                 window.renderPackDetail(window.currentManagingPackId); // Call via window
              }
              // If currently on category management page, re-render it
              if (document.getElementById('manage-categories-section').classList.contains('active')) {
-                 renderCategoryManagement();
+                 window.renderCategoryManagement(); // Call via window
              }
-             saveData(); // Save data
+             window.saveData(); // Call via window
         }
 
         // Function to close the edit item modal
@@ -1028,35 +1030,34 @@
 
          // Function to toggle packed status for an item specifically on the pack detail page
         function togglePackItemPackedOnDetailPage(itemId) {
-            const item = items.find(item => item.id === itemId);
-            if (item && currentManagingPackId) {
+            const item = window.items.find(item => item.id === itemId);
+            if (item && window.currentManagingPackId) {
                 item.packed = !item.packed;
-                saveData(); // Save immediately
-                renderPackDetail(currentManagingPackId); // Re-render the pack detail page
-                renderAll(); // Re-render everything to update pack progress bars
+                window.saveData(); // Call via window
+                window.renderPackDetail(window.currentManagingPackId); // Call via window
+                window.renderAll(); // Call via window
             }
         }
 
         // Function to unpack all items in the current pack
         function unpackAllInCurrentPack() {
-            console.log(`Déclenchement de la fonction unpackAllInCurrentPack pour le pack ID: ${currentManagingPackId}`);
-            if (currentManagingPackId) {
-                const itemsInPack = items.filter(item => item.packIds && item.packIds.includes(currentManagingPackId));
+            console.log(`Déclenchement de la fonction unpackAllInCurrentPack pour le pack ID: ${window.currentManagingPackId}`);
+            if (window.currentManagingPackId) {
+                const itemsInPack = window.items.filter(item => item.packIds && item.packIds.includes(window.currentManagingPackId));
                 console.log(`Nombre d'items dans le pack: ${itemsInPack.length}`);
                 if (itemsInPack.length > 0) {
-                    // Direct action without confirmation modal
                     console.log("Déballage des items...");
                     itemsInPack.forEach(item => {
-                        item.packed = false; // Set packed status to false
+                        item.packed = false;
                          console.log(`Item déballé: ${item.name} (ID: ${item.id})`);
                     });
-                    saveData(); // Save changes
+                    window.saveData(); // Call via window
                     console.log("Données sauvegardées.");
-                    renderPackDetail(currentManagingPackId); // Re-render pack detail page
-                    renderAll(); // Re-render everything to update pack progress bars
+                    window.renderPackDetail(window.currentManagingPackId); // Call via window
+                    window.renderAll(); // Call via window
                     console.log("Affichage mis à jour.");
                 } else {
-                     alert("Ce pack est déjà vide ou ne contient pas d'items à déballer.");
+                     window.alert("Ce pack est déjà vide ou ne contient pas d'items à déballer."); // Call via window
                      console.log("Pack vide ou aucun item à déballer.");
                 }
             } else {
@@ -1206,7 +1207,7 @@
             let generatedImageUrl = ''; // Default
 
             // --- Part 1: Text Generation (Category, Weight) ---
-            const textPrompt = `Given an item named "${itemName}" and brand "${itemBrand || 'N/A'}", suggest a suitable category and an estimated realistic weight in grams. Provide the response as a JSON object with 'suggestedCategory' (string) and 'estimated_weight_grams' (number). The category should be a single word. Example: {"suggestedCategory": "Camping", "estimated_weight_grams": 1500}. The suggested category must be one of the following, if no direct match, pick the closest one: ${categories.map(cat => cat.name).join(', ')}. If none are suitable, suggest 'Divers'.`;
+            const textPrompt = `Given an item named "${itemName}" and brand "${itemBrand || 'N/A'}", suggest a suitable category and an estimated realistic weight in grams. Provide the response as a JSON object with 'suggestedCategory' (string) and 'estimated_weight_grams' (number). The category should be a single word. Example: {"suggestedCategory": "Camping", "estimated_weight_grams": 1500}. The suggested category must be one of the following, if no direct match, pick the closest one: ${window.categories.map(cat => cat.name).join(', ')}. If none are suitable, suggest 'Divers'.`;
 
             const textSchema = {
                 type: "OBJECT",
@@ -1224,11 +1225,11 @@
                     estimatedWeight = textResponse.estimated_weight_grams;
 
                     // Validate and map suggested category
-                    const existingCategoryNames = categories.map(cat => cat.name.toLowerCase());
+                    const existingCategoryNames = window.categories.map(cat => cat.name.toLowerCase());
                     if (!existingCategoryNames.includes(suggestedCategory.toLowerCase())) {
                         const closestCategory = existingCategoryNames.find(catName => suggestedCategory.toLowerCase().includes(catName));
                         if (closestCategory) {
-                            suggestedCategory = categories.find(cat => cat.name.toLowerCase() === closestCategory).name;
+                            suggestedCategory = window.categories.find(cat => cat.name.toLowerCase() === closestCategory).name;
                         } else {
                             suggestedCategory = 'Divers';
                         }
@@ -1236,8 +1237,8 @@
 
                     itemWeightInput.value = estimatedWeight;
                     // IMPORTANT: Ensure 'Divers' category is added AND dropdown is updated BEFORE setting the value
-                    if (suggestedCategory === 'Divers' && !categories.some(cat => cat.name === 'Divers')) {
-                        categories.push({ name: 'Divers' });
+                    if (suggestedCategory === 'Divers' && !window.categories.some(cat => cat.name === 'Divers')) {
+                        window.categories.push({ name: 'Divers' });
                         updateCategoryDropdowns(); // Update dropdowns immediately
                         saveData();
                     }
@@ -1278,7 +1279,7 @@
                 editItemWeightInput.disabled = false;
                 editItemImageUrlInput.disabled = false;
                 // After all suggestions, re-render to display changes immediately
-                renderAll();
+                window.renderAll(); // Call via window
             }
         }
 
@@ -1303,7 +1304,7 @@
             generatePackListButton.disabled = true;
 
             // Prepare existing inventory data for the prompt
-            const existingInventory = items.map(item => ({
+            const existingInventory = window.items.map(item => ({
                 name: item.name,
                 weight: item.weight,
                 category: item.category
@@ -1319,7 +1320,7 @@ Respectez strictement le schéma JSON.
 Suggérez entre 5 et 10 éléments essentiels pour un voyage de type "${activity}" à "${destination}" pour "${duration}" jour(s).
 Priorisez les éléments de l'inventaire existant s'ils sont appropriés. Si aucun élément existant n'est approprié, suggérez un nouvel élément.
 Les poids doivent être des estimations réalistes en grammes.
-La catégorie doit être l'une des catégories existantes si possible : ${categories.map(cat => cat.name).join(', ')}. Si aucune catégorie existante n'est appropriée, utilisez 'Divers'.`;
+La catégorie doit être l'une des catégories existantes si possible : ${window.categories.map(cat => cat.name).join(', ')}. Si aucune catégorie existante n'est appropriée, utilisez 'Divers'.`;
 
 
             const schema = {
@@ -1385,12 +1386,12 @@ La catégorie doit être l'une des catégories existantes si possible : ${catego
                 // Only add if it's not marked as an existing item (checkbox only present for new items)
                 if (name && !isNaN(weight)) {
                     // Check if category exists, if not, add it
-                    if (!categories.some(cat => cat.name === category)) {
-                        categories.push({ name: category });
+                    if (!window.categories.some(cat => cat.name === category)) {
+                        window.categories.push({ name: category });
                     }
 
                     // Add item to the main items array
-                    items.push({
+                    window.items.push({
                         id: `gen-item-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`, // More unique ID
                         name: name,
                         weight: weight, // Use 'weight' property as expected by the rest of the app
@@ -1408,8 +1409,8 @@ La catégorie doit être l'une des catégories existantes si possible : ${catego
             });
 
             if (itemsAddedCount > 0) {
-                alert(`${itemsAddedCount} item(s) suggéré(s) ajouté(s) à votre inventaire !`);
-                renderAll(); // Re-render all lists to show new items and categories
+                window.alert(`${itemsAddedCount} item(s) suggéré(s) ajouté(s) à votre inventaire !`); // Call via window
+                window.renderAll(); // Call via window
                 // Clear generated items after adding
                 generatedItemsListElement.innerHTML = '<li class="text-center text-gray-500">Aucune suggestion d\'item générée. Veuillez utiliser le formulaire ci-dessus.</li>'; // Reset message
                 // Optionally clear the generation inputs
@@ -1466,7 +1467,7 @@ La catégorie doit être l'une des catégories existantes si possible : ${catego
                  openEditModal(itemId); // Open edit modal
             } else if (target.classList.contains('delete-button')) {
                  // Use native confirm for item deletion from inventory
-                 const confirmDelete = confirm(`Voulez-vous vraiment supprimer l'item "${items.find(item => item.id === itemId)?.name || 'Inconnu'}" de votre inventaire ?`);
+                 const confirmDelete = window.confirm(`Voulez-vous vraiment supprimer l'item "${window.items.find(item => item.id === itemId)?.name || 'Inconnu'}" de votre inventaire ?`); // Call via window
                  if (!confirmDelete) {
                      return; // Stop if user cancels
                  }
@@ -1481,10 +1482,10 @@ La catégorie doit être l'une des catégories existantes si possible : ${catego
              const packId = target.dataset.packId; // Get the pack ID from data attribute
 
              if (target.classList.contains('view-pack-button')) {
-                 showSection('pack-detail-section'); // Show pack detail section
-                 renderPackDetail(packId); // Render details for this pack
+                 showSection('pack-detail-section');
+                 renderPackDetail(packId);
              } else if (target.classList.contains('delete-button')) {
-                 deletePack(packId); // This now uses native confirm
+                 deletePack(packId);
              }
          });
 
@@ -1493,11 +1494,11 @@ La catégorie doit être l'une des catégories existantes si possible : ${catego
              const target = event.target;
              const itemId = target.dataset.itemId; // Get the item ID
 
-             if (target.classList.contains('add-to-pack-button') && currentManagingPackId) {
-                 addItemToPack(itemId, currentManagingPackId);
-             } else if (target.classList.contains('remove-from-pack-button') && currentManagingPackId) {
-                 removeItemFromPack(itemId, currentManagingPackId);
-             } else if (target.classList.contains('pack-item-packed-button')) { // New listener for pack/unpack on detail page
+             if (target.classList.contains('add-to-pack-button') && window.currentManagingPackId) {
+                 addItemToPack(itemId, window.currentManagingPackId);
+             } else if (target.classList.contains('remove-from-pack-button') && window.currentManagingPackId) {
+                 removeItemFromPack(itemId, window.currentManagingPackId);
+             } else if (target.classList.contains('pack-item-packed-button')) {
                  togglePackItemPackedOnDetailPage(itemId);
              }
          });
@@ -1509,27 +1510,27 @@ La catégorie doit être l'une des catégories existantes si possible : ${catego
          // Event listener for the view filter select
          viewFilterSelect.addEventListener('change', renderListByView);
 
-         // Event listener for checkboxes within the pack packing modal (event delegation) - This modal is now primarily for a quick overview/packing, not detailed pack management.
+         // Event listener for checkboxes within the pack packing modal (event delegation)
          packPackingListElement.addEventListener('change', function(event) {
              const target = event.target;
              if (target.type === 'checkbox') {
                  const itemId = target.dataset.itemId;
-                 togglePackItemPacked(itemId); // This function still updates the item's packed status globally
+                 togglePackItemPacked(itemId);
              }
          });
 
 
          // Event listener to close the packing modal
          closePackingModalButton.addEventListener('click', function() {
-             packPackingModal.classList.add('hidden'); // Hide the modal
-             renderAll(); // Re-render main view to update pack progress bars and weights
+             packPackingModal.classList.add('hidden');
+             window.renderAll(); // Call via window
          });
 
          // Close packing modal if clicking outside (optional)
          packPackingModal.addEventListener('click', function(event) {
              if (event.target === packPackingModal) {
                  packPackingModal.classList.add('hidden');
-                 renderAll(); // Re-render main view
+                 window.renderAll(); // Call via window
              }
          });
 
@@ -1593,7 +1594,58 @@ La catégorie doit être l'une des catégories existantes si possible : ${catego
 
 
         // Load data and render everything when the page loads
-        loadData();
+        // In a test environment, tests should control when loadData is called.
+        if (typeof QUnit === 'undefined') {
+            window.loadData(); // Call via window
+            // Show the default section on load (Inventory)
+            window.showSection('inventory-section'); // Call via window
+        }
 
-        // Show the default section on load (Inventory)
-        showSection('inventory-section');
+// Ensure this is at the VERY END of app.js
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+        // Core data manipulation functions
+        addItem: typeof addItem !== 'undefined' ? addItem : undefined,
+        deleteItem: typeof deleteItem !== 'undefined' ? deleteItem : undefined,
+        addPack: typeof addPack !== 'undefined' ? addPack : undefined,
+        deletePack: typeof deletePack !== 'undefined' ? deletePack : undefined,
+        addCategory: typeof addCategory !== 'undefined' ? addCategory : undefined,
+        deleteCategory: typeof deleteCategory !== 'undefined' ? deleteCategory : undefined,
+        saveData: typeof saveData !== 'undefined' ? saveData : undefined,
+        loadData: typeof loadData !== 'undefined' ? loadData : undefined,
+        renderAll: typeof renderAll !== 'undefined' ? renderAll : undefined,
+        renderPacks: typeof renderPacks !== 'undefined' ? renderPacks : undefined,
+        renderItems: typeof renderItems !== 'undefined' ? renderItems : undefined,
+        renderCategories: typeof renderCategories !== 'undefined' ? renderCategories : undefined,
+        renderCategoryManagement: typeof renderCategoryManagement !== 'undefined' ? renderCategoryManagement : undefined,
+        renderPackDetail: typeof renderPackDetail !== 'undefined' ? renderPackDetail : undefined,
+        renderPackPacking: typeof renderPackPacking !== 'undefined' ? renderPackPacking : undefined,
+        renderListByView: typeof renderListByView !== 'undefined' ? renderListByView : undefined,
+        updateCategoryDropdowns: typeof updateCategoryDropdowns !== 'undefined' ? updateCategoryDropdowns : undefined,
+        updateViewFilterOptions: typeof updateViewFilterOptions !== 'undefined' ? updateViewFilterOptions : undefined,
+        updateImagePreview: typeof updateImagePreview !== 'undefined' ? updateImagePreview : undefined,
+        showSection: typeof showSection !== 'undefined' ? showSection : undefined,
+        togglePacked: typeof togglePacked !== 'undefined' ? togglePacked : undefined,
+        togglePackItemPacked: typeof togglePackItemPacked !== 'undefined' ? togglePackItemPacked : undefined,
+        addItemToPack: typeof addItemToPack !== 'undefined' ? addItemToPack : undefined,
+        removeItemFromPack: typeof removeItemFromPack !== 'undefined' ? removeItemFromPack : undefined,
+        saveEditedItem: typeof saveEditedItem !== 'undefined' ? saveEditedItem : undefined,
+        openEditModal: typeof openEditModal !== 'undefined' ? openEditModal : undefined,
+        closeEditModal: typeof closeEditModal !== 'undefined' ? closeEditModal : undefined,
+        togglePackItemPackedOnDetailPage: typeof togglePackItemPackedOnDetailPage !== 'undefined' ? togglePackItemPackedOnDetailPage : undefined,
+        unpackAllInCurrentPack: typeof unpackAllInCurrentPack !== 'undefined' ? unpackAllInCurrentPack : undefined,
+        callGeminiAPI: typeof callGeminiAPI !== 'undefined' ? callGeminiAPI : undefined,
+        callImagenAPI: typeof callImagenAPI !== 'undefined' ? callImagenAPI : undefined,
+        suggestItemDetails: typeof suggestItemDetails !== 'undefined' ? suggestItemDetails : undefined,
+        generatePackList: typeof generatePackList !== 'undefined' ? generatePackList : undefined,
+
+
+        // Expose global arrays for assertion/manipulation in tests (use with caution)
+        _getGlobalItems: function() { return typeof window !== 'undefined' ? window.items : undefined; },
+        _setGlobalItems: function(newItems) { if (typeof window !== 'undefined') window.items = newItems; },
+        _getGlobalPacks: function() { return typeof window !== 'undefined' ? window.packs : undefined; },
+        _setGlobalPacks: function(newPacks) { if (typeof window !== 'undefined') window.packs = newPacks; },
+        _getGlobalCategories: function() { return typeof window !== 'undefined' ? window.categories : undefined; },
+        _setGlobalCategories: function(newCategories) { if (typeof window !== 'undefined') window.categories = newCategories; }
+    };
+}
