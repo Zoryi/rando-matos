@@ -609,7 +609,7 @@
                               class="w-10 h-10 rounded-full object-cover mr-2 border border-gray-300">
                          <span class="pack-detail-item-name">${item.name} (${item.weight} g)</span>
                          <div class="pack-detail-actions">
-                             <button class="add-to-pack-button" data-item-id="${item.id}">Ajeter</button>
+                             <button class="add-to-pack-button" data-item-id="${item.id}">Ajouter</button>
                          </div>
                      `;
                      availableItemsList.appendChild(listItem);
