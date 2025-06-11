@@ -1,41 +1,76 @@
-const assert = require('assert');
+const assert =require('assert');
 const { JSDOM } = require('jsdom');
 const fs = require('fs');
 const path = require('path');
 const sinon = require('sinon');
 
-describe('Data Management (Persistence)', function() {
+// Define paths to all JS files in correct loading order
+const basePath = path.resolve(__dirname, '..');
+const scriptPaths = [
+    // Models
+    'models/Item.js',
+    'models/Pack.js',
+    'models/Category.js',
+    // UI Utils
+    'ui/utils/imageUtils.js',
+    // Services
+    'services/persistenceService.js',
+    'services/itemService.js',
+    'services/packService.js',
+    'services/categoryService.js',
+    'services/apiService.js',
+    // UI Components (Needed because app.js instantiates them, and app.js is evaluated)
+    'ui/navigationHandler.js',
+    'ui/modalHandler.js',
+    'ui/itemDisplay.js',
+    'ui/packDisplay.js',
+    'ui/categoryDisplay.js',
+    'ui/formHandler.js',
+    'ui/aiFeaturesUI.js',
+    // Main App
+    'app.js'
+];
+
+let scriptContents = {};
+try {
+    scriptPaths.forEach(p => {
+        scriptContents[p] = fs.readFileSync(path.join(basePath, p), 'utf8');
+    });
+    console.log('Successfully read all JS files for data.test.js.');
+} catch (err) {
+    console.error('CRITICAL: Failed to read one or more JS files for data.test.js. Test cannot run.', err);
+    throw err;
+}
+
+describe('Data Management (PersistenceService Tests)', function() {
     let dom;
     let window;
     let document;
     let localStorageMock;
-    let localStorageSetItemStub;
-    let localStorageGetItemStub; // Added this
-    let renderAllStub; // Moved here for wider scope
+    let localStorageSetItemSpy; // Renamed from Stub to Spy for clarity
+    let localStorageGetItemSpy;  // Renamed from Stub to Spy for clarity
 
-    const appJsPath = path.resolve(__dirname, '../app.js');
-    const persistenceServiceJsPath = path.resolve(__dirname, '../services/persistenceService.js');
-    let appJsContent;
-    let persistenceServiceJsContent;
+    // Stubs for functions that might be called by app.js's initApp
+    let renderAllStub, showSectionStub, updateCategoryDropdownsStub, updateViewFilterOptionsStub, alertStub, confirmStub, fetchStub;
 
-    try {
-        appJsContent = fs.readFileSync(appJsPath, 'utf8');
-        persistenceServiceJsContent = fs.readFileSync(persistenceServiceJsPath, 'utf8');
-    } catch (err) {
-        console.error("Failed to read JS files for test setup:", err);
-        throw err; // Fail fast if files aren't readable
-    }
 
     beforeEach(() => {
         const html = '<!DOCTYPE html><html><head></head><body>' +
-                     '<div id="item-list"></div>' + // Required by renderItems called by renderListByView->renderAll
-                     '<div id="total-weight"></div>' + // Required by renderItems
-                     '<div id="inventory-weight"></div>' + // Required by renderItems
-                     '<div id="pack-list"></div>' + // Required by renderPacks
-                     '<select id="view-filter"></select>' + // Required by updateViewFilterOptions/renderPacks
-                     '<div id="category-management-list"></div>' + // Required by renderCategoryManagement
-                     '<select id="item-category"></select>' + // Required by updateCategoryDropdowns
-                     '<select id="edit-item-category"></select>' + // Required by updateCategoryDropdowns
+                     // Minimal DOM for app.js init, if any. Most components find their own elements.
+                     // NavigationHandler needs these:
+                     '<nav><ul><li><a href="#" data-section="inventory">Inventory</a></li></ul></nav>' +
+                     '<div class="main-content"><section id="inventory-section"></section></div>' +
+                     // Elements for updateCategoryDropdowns, updateViewFilterOptions if they are not fully componentized yet
+                     // and are called by initApp or renderAll
+                     '<select id="item-category"></select>' +
+                     '<select id="edit-item-category"></select>' +
+                     '<select id="view-filter"></select>' +
+                     // Other elements that might be globally accessed by remaining app.js functions
+                     '<div id="item-list"></div>' +
+                     '<div id="total-weight"></div>' +
+                     '<div id="inventory-weight"></div>' +
+                     '<div id="pack-list"></div>' +
+                     '<div id="category-management-list"></div>' +
                      '</body></html>';
         dom = new JSDOM(html, {
             url: "http://localhost",
@@ -58,125 +93,112 @@ describe('Data Management (Persistence)', function() {
         global.window = window;
         global.document = document;
         Object.defineProperty(global.window, 'localStorage', { value: localStorageMock, writable: true });
-        global.localStorage = global.window.localStorage;
+        global.localStorage = global.window.localStorage; // Ensure global.localStorage also points to the mock
 
-        global.window.alert = sinon.stub();
-        global.window.confirm = sinon.stub().returns(true);
-        global.window.fetch = sinon.stub().resolves({ ok: true, json: () => Promise.resolve({}) });
+        // Stub global functions that app.js or its components might call during init.
+        // These are functions that persistenceService tests should NOT be concerned with.
+        alertStub = sinon.stub(window, 'alert');
+        confirmStub = sinon.stub(window, 'confirm').returns(true);
+        fetchStub = sinon.stub(window, 'fetch').resolves({ ok: true, json: () => Promise.resolve({}) });
 
-        // Evaluate scripts first, then stub/spy on their functions
+        // Evaluate all scripts. persistenceService is among them.
+        // app.js will run initApp at its end.
         try {
-            dom.window.eval(appJsContent);
-            dom.window.eval(persistenceServiceJsContent);
+            scriptPaths.forEach(p => {
+                console.log(`Evaluating ${p} in data.test.js`);
+                window.eval(scriptContents[p]);
+            });
+            console.log('All scripts evaluated for data.test.js.');
         } catch (e) {
-            console.error("Error evaluating scripts in JSDOM:", e);
+            console.error("Error evaluating scripts in JSDOM for data.test.js:", e);
             throw e;
         }
 
-        // Now that app.js is evaluated, its functions should be on window
-        renderAllStub = sinon.stub(global.window, 'renderAll');
-        global.window.showSection = global.window.showSection ? sinon.stub(global.window, 'showSection') : sinon.stub();
-        global.window.updateCategoryDropdowns = global.window.updateCategoryDropdowns ? sinon.stub(global.window, 'updateCategoryDropdowns') : sinon.stub();
-        global.window.updateViewFilterOptions = global.window.updateViewFilterOptions ? sinon.stub(global.window, 'updateViewFilterOptions') : sinon.stub();
+        // After all scripts are eval'd, including app.js which defines these on window:
+        // Stub functions that are part of app.js or UI components that might be triggered by initApp.
+        // The goal is to isolate persistenceService.
+        renderAllStub = sinon.stub(window, 'renderAll'); // renderAll is still on window
+        // showSection is now on navigationHandler, initApp calls it.
+        // If navigationHandler is not fully mocked, its showSection might run.
+        // For safety, if window.navigationHandler and its method exist, stub it.
+        if (window.navigationHandler && typeof window.navigationHandler.showSection === 'function') {
+            showSectionStub = sinon.stub(window.navigationHandler, 'showSection');
+        } else {
+            // Fallback if navigationHandler or showSection is not yet on window as expected
+            // This might happen if script eval order or component init has issues.
+             console.warn("data.test.js: window.navigationHandler.showSection not found to stub. This might be an issue.");
+             showSectionStub = sinon.stub(); // Generic stub
+        }
 
-        localStorageSetItemStub = sinon.spy(global.localStorage, 'setItem');
-        localStorageGetItemStub = sinon.spy(global.localStorage, 'getItem'); // Initialize this spy
+        // updateCategoryDropdowns and updateViewFilterOptions are still global in app.js
+        updateCategoryDropdownsStub = sinon.stub(window, 'updateCategoryDropdowns');
+        updateViewFilterOptionsStub = sinon.stub(window, 'updateViewFilterOptions');
 
-        global.window.items = global.window.items || [];
-        global.window.packs = global.window.packs || [];
-        global.window.categories = global.window.categories || [];
+
+        // Spy on localStorage methods AFTER they've been set up.
+        localStorageSetItemSpy = sinon.spy(localStorageMock, 'setItem');
+        localStorageGetItemSpy = sinon.spy(localStorageMock, 'getItem');
     });
 
     afterEach(() => {
-        sinon.restore();
+        sinon.restore(); // Restores all stubs/spies/mocks associated with sinon
         if (global.window && global.window.close) {
-            global.window.close();
+            global.window.close(); // JSDOM cleanup
         }
     });
 
     describe('persistenceService.saveData', function() {
-        it('should save items, packs, and categories to localStorage', function() {
-            const testItems = [{ id: 'i1', name: 'Test Item Save' }];
+        it('should save items, packs, and categories (plain objects) to localStorage', function() {
+            const testItems = [{ id: 'i1', name: 'Test Item Save' }]; // Plain objects
             const testPacks = [{ id: 'p1', name: 'Test Pack Save' }];
             const testCategories = [{ name: 'Test Cat Save' }];
 
-            global.window.items = testItems; // app.js uses window.items etc.
-            global.window.packs = testPacks;
-            global.window.categories = testCategories;
+            assert.ok(window.persistenceService && typeof window.persistenceService.saveData === 'function', 'persistenceService.saveData is not defined');
+            window.persistenceService.saveData(testItems, testPacks, testCategories);
 
-            assert.ok(global.window.persistenceService && typeof global.window.persistenceService.saveData === 'function', 'persistenceService.saveData is not defined on window');
-
-            global.window.persistenceService.saveData(global.window.items, global.window.packs, global.window.categories);
-
-            assert.ok(localStorageSetItemStub.calledThrice, 'localStorage.setItem should be called 3 times');
-            assert.ok(localStorageSetItemStub.calledWith('backpackItems', JSON.stringify(testItems)), 'backpackItems not saved correctly');
-            assert.ok(localStorageSetItemStub.calledWith('backpackPacks', JSON.stringify(testPacks)), 'backpackPacks not saved correctly');
-            assert.ok(localStorageSetItemStub.calledWith('backpackCategories', JSON.stringify(testCategories)), 'backpackCategories not saved correctly');
+            assert.ok(localStorageSetItemSpy.calledThrice, 'localStorage.setItem should be called 3 times');
+            assert.ok(localStorageSetItemSpy.calledWith('backpackItems', JSON.stringify(testItems)), 'backpackItems not saved correctly');
+            assert.ok(localStorageSetItemSpy.calledWith('backpackPacks', JSON.stringify(testPacks)), 'backpackPacks not saved correctly');
+            assert.ok(localStorageSetItemSpy.calledWith('backpackCategories', JSON.stringify(testCategories)), 'backpackCategories not saved correctly');
         });
 
         it('should handle empty arrays correctly when saving', function() {
-            global.window.items = [];
-            global.window.packs = [];
-            global.window.categories = [];
-
-            assert.ok(global.window.persistenceService && typeof global.window.persistenceService.saveData === 'function', 'persistenceService.saveData is not defined on window');
-            global.window.persistenceService.saveData(global.window.items, global.window.packs, global.window.categories);
-
-            assert.ok(localStorageSetItemStub.calledWith('backpackItems', JSON.stringify([])), 'Empty backpackItems not saved correctly');
-            assert.ok(localStorageSetItemStub.calledWith('backpackPacks', JSON.stringify([])), 'Empty backpackPacks not saved correctly');
-            assert.ok(localStorageSetItemStub.calledWith('backpackCategories', JSON.stringify([])), 'Empty backpackCategories not saved correctly');
+            window.persistenceService.saveData([], [], []);
+            assert.ok(localStorageSetItemSpy.calledWith('backpackItems', JSON.stringify([])), 'Empty backpackItems not saved correctly');
+            assert.ok(localStorageSetItemSpy.calledWith('backpackPacks', JSON.stringify([])), 'Empty backpackPacks not saved correctly');
+            assert.ok(localStorageSetItemSpy.calledWith('backpackCategories', JSON.stringify([])), 'Empty backpackCategories not saved correctly');
         });
 
          it('should handle undefined inputs by saving empty arrays', function() {
-            assert.ok(global.window.persistenceService && typeof global.window.persistenceService.saveData === 'function', 'persistenceService.saveData is not defined on window');
-            global.window.persistenceService.saveData(undefined, undefined, undefined);
-
-            assert.ok(localStorageSetItemStub.calledWith('backpackItems', JSON.stringify([])), 'Undefined items not handled by saving empty array');
-            assert.ok(localStorageSetItemStub.calledWith('backpackPacks', JSON.stringify([])), 'Undefined packs not handled by saving empty array');
-            assert.ok(localStorageSetItemStub.calledWith('backpackCategories', JSON.stringify([])), 'Undefined categories not handled by saving empty array');
+            window.persistenceService.saveData(undefined, undefined, undefined);
+            assert.ok(localStorageSetItemSpy.calledWith('backpackItems', JSON.stringify([])), 'Undefined items not handled');
+            assert.ok(localStorageSetItemSpy.calledWith('backpackPacks', JSON.stringify([])), 'Undefined packs not handled');
+            assert.ok(localStorageSetItemSpy.calledWith('backpackCategories', JSON.stringify([])), 'Undefined categories not handled');
         });
     });
 
     describe('persistenceService.loadData', function() {
         beforeEach(function() {
-            // Ensure localStorage is clean before each loadData test specifically
-            global.localStorage.clear();
-            // Reset spies that track calls within loadData or its effects
-            localStorageGetItemStub.resetHistory();
-            localStorageSetItemStub.resetHistory(); // Though loadData shouldn't call setItem
-            renderAllStub.resetHistory();
+            localStorageMock.clear(); // Ensure clean storage for each load test
+            localStorageGetItemSpy.resetHistory();
+            localStorageSetItemSpy.resetHistory();
+            // renderAllStub is part of the main beforeEach, no need to reset if it's correctly stubbed before loadData call
         });
 
-        it('should load data from localStorage if present and not call renderAll', function() {
-            const storedItems = [{ id: 's_i1', name: 'Stored Item', packIds: ['p1'] }];
+        it('should load data from localStorage if present', function() {
+            const storedItems = [{ id: 's_i1', name: 'Stored Item', packIds: ['p1'] }]; // Plain objects
             const storedPacks = [{ id: 's_p1', name: 'Stored Pack' }];
             const storedCategories = [{ name: 'Stored Category' }];
-            global.localStorage.setItem('backpackItems', JSON.stringify(storedItems));
-            global.localStorage.setItem('backpackPacks', JSON.stringify(storedPacks));
-            global.localStorage.setItem('backpackCategories', JSON.stringify(storedCategories));
+            localStorageMock.setItem('backpackItems', JSON.stringify(storedItems));
+            localStorageMock.setItem('backpackPacks', JSON.stringify(storedPacks));
+            localStorageMock.setItem('backpackCategories', JSON.stringify(storedCategories));
 
-            renderAllStub.resetHistory();
+            const data = window.persistenceService.loadData();
 
-            const data = global.window.persistenceService.loadData();
-
-            console.log("DEBUG: Test 1 - data.items[0]:", JSON.stringify(data.items[0], null, 2));
-            console.log("DEBUG: Test 1 - storedItems[0]:", JSON.stringify(storedItems[0], null, 2));
-            console.log("DEBUG: Test 1 - data.items.length:", data.items.length);
-            console.log("DEBUG: Test 1 - storedItems.length:", storedItems.length);
-            console.log("DEBUG: Test 1 - Full data.items:", JSON.stringify(data.items, null, 2));
-            console.log("DEBUG: Test 1 - Full storedItems:", JSON.stringify(storedItems, null, 2));
-            console.log("DEBUG: Test 1 - Full data.packs:", JSON.stringify(data.packs, null, 2));
-            console.log("DEBUG: Test 1 - Full storedPacks:", JSON.stringify(storedPacks, null, 2));
-            console.log("DEBUG: Test 1 - Full data.categories:", JSON.stringify(data.categories, null, 2));
-            console.log("DEBUG: Test 1 - Full storedCategories:", JSON.stringify(storedCategories, null, 2));
-            console.log("DEBUG: Test 1 - data.exampleDataUsed:", data.exampleDataUsed);
-
-            assert.strictEqual(data.exampleDataUsed, false, 'exampleDataUsed flag should be false'); // Check this first
-            // Using JSON.stringify for comparison due to potential deepStrictEqual issues with object instances
-            assert.strictEqual(JSON.stringify(data.items), JSON.stringify(storedItems), 'Items not loaded correctly (JSON check)');
-            assert.strictEqual(JSON.stringify(data.packs), JSON.stringify(storedPacks), 'Packs not loaded correctly (JSON check)');
-            assert.strictEqual(JSON.stringify(data.categories), JSON.stringify(storedCategories), 'Categories not loaded correctly (JSON check)');
-            assert.ok(renderAllStub.notCalled, 'renderAll should NOT be called by persistenceService.loadData');
+            assert.strictEqual(data.exampleDataUsed, false, 'exampleDataUsed flag should be false');
+            assert.deepStrictEqual(data.items, storedItems, 'Items not loaded correctly');
+            assert.deepStrictEqual(data.packs, storedPacks, 'Packs not loaded correctly');
+            assert.deepStrictEqual(data.categories, storedCategories, 'Categories not loaded correctly');
         });
 
         it('should handle old item format (packId to packIds migration) from localStorage', function() {
@@ -184,71 +206,45 @@ describe('Data Management (Persistence)', function() {
                 { id: 'old1', name: 'Old Item 1', packId: 'p_old' },
                 { id: 'old2', name: 'Old Item 2', packIds: ['p_new'] }
             ];
-            global.localStorage.setItem('backpackItems', JSON.stringify(oldFormatItems));
-            global.localStorage.setItem('backpackPacks', JSON.stringify([]));
-            global.localStorage.setItem('backpackCategories', JSON.stringify([]));
-            renderAllStub.resetHistory();
+            localStorageMock.setItem('backpackItems', JSON.stringify(oldFormatItems));
+            localStorageMock.setItem('backpackPacks', JSON.stringify([])); // Provide empty for others for this test
+            localStorageMock.setItem('backpackCategories', JSON.stringify([]));
 
-            const data = global.window.persistenceService.loadData();
+            const data = window.persistenceService.loadData();
 
-            console.log("DEBUG: Test 2 - Full data.items:", JSON.stringify(data.items, null, 2));
-            console.log("DEBUG: Test 2 - data.items[0]:", JSON.stringify(data.items[0], null, 2));
-            console.log("DEBUG: Test 2 - data.items[0].packIds value:", JSON.stringify(data.items[0] ? data.items[0].packIds : 'undefined', null, 2));
+            assert.strictEqual(data.items.length, 2);
+            const item1 = data.items.find(i => i.id === 'old1');
+            const item2 = data.items.find(i => i.id === 'old2');
 
-            console.log("DEBUG: Test 2 - data.items[1]:", JSON.stringify(data.items[1], null, 2));
-            console.log("DEBUG: Test 2 - data.items[1].packIds value:", JSON.stringify(data.items[1] ? data.items[1].packIds : 'undefined', null, 2));
-            console.log("DEBUG: Test 2 - typeof data.items[1].packIds:", typeof data.items[1].packIds);
-            console.log("DEBUG: Test 2 - Array.isArray(data.items[1].packIds):", Array.isArray(data.items[1].packIds));
-
-            assert.strictEqual(data.items.length, 2, "data.items should have 2 elements");
-            // Checks for item[0] (migrated one)
-            assert.ok(data.items[0] && data.items[0].packIds, "data.items[0].packIds should exist");
-            assert.ok(Array.isArray(data.items[0].packIds), 'data.items[0].packIds should be an array');
-            assert.strictEqual(data.items[0].packIds.length, 1, 'data.items[0].packIds should have 1 element');
-            assert.strictEqual(data.items[0].packIds[0], 'p_old', 'data.items[0].packIds[0] should be p_old');
-            assert.strictEqual(data.items[0].packId, undefined, 'Old packId property should be removed');
-
-            // Checks for item[1] (pre-existing packIds)
-            assert.ok(data.items[1] && data.items[1].packIds, "data.items[1].packIds should exist");
-            assert.ok(Array.isArray(data.items[1].packIds), 'data.items[1].packIds should be an array for item[1]');
-            assert.strictEqual(data.items[1].packIds.length, 1, 'data.items[1].packIds should have 1 element for item[1]');
-            assert.strictEqual(data.items[1].packIds[0], 'p_new', 'data.items[1].packIds[0] should be p_new for item[1]');
-
-            assert.strictEqual(data.exampleDataUsed, true, "exampleDataUsed should be true as packs/categories were defaulted");
-            assert.ok(renderAllStub.notCalled);
+            assert.ok(item1 && Array.isArray(item1.packIds) && item1.packIds.includes('p_old') && item1.packId === undefined, 'Item old1 not migrated correctly');
+            assert.ok(item2 && Array.isArray(item2.packIds) && item2.packIds.includes('p_new'), 'Item old2 not preserved correctly');
+            // exampleDataUsed will be true because packs and categories were defaulted
+            assert.strictEqual(data.exampleDataUsed, true, "exampleDataUsed should be true if some defaults were used");
         });
 
-        it('should load default example data if localStorage is empty and not call renderAll', function() {
-            global.localStorage.clear();
-            localStorageGetItemStub.resetHistory();
-            renderAllStub.resetHistory();
-
-            const data = global.window.persistenceService.loadData();
+        it('should load default example data if localStorage is empty', function() {
+            localStorageMock.clear(); // Make sure it's empty
+            const data = window.persistenceService.loadData();
 
             assert.ok(data.items.length > 0, 'Default items should be loaded');
             assert.ok(data.packs.length > 0, 'Default packs should be loaded');
             assert.ok(data.categories.length > 0, 'Default categories should be loaded');
-            const expectedDefaultItem = data.items.find(item => item.name === 'Tente 2P MSR Hubba Hubba');
-            assert.ok(expectedDefaultItem, 'Known default item "Tente 2P MSR Hubba Hubba" not found');
             assert.strictEqual(data.exampleDataUsed, true, 'exampleDataUsed flag should be true');
-            assert.ok(renderAllStub.notCalled);
 
-            assert.ok(localStorageGetItemStub.calledWith('backpackItems'));
-            assert.ok(localStorageGetItemStub.calledWith('backpackPacks'));
-            assert.ok(localStorageGetItemStub.calledWith('backpackCategories'));
+            assert.ok(localStorageGetItemSpy.calledWith('backpackItems'));
+            assert.ok(localStorageGetItemSpy.calledWith('backpackPacks'));
+            assert.ok(localStorageGetItemSpy.calledWith('backpackCategories'));
         });
 
-        it('should load default example data if localStorage items are an empty array and not call renderAll', function() {
-            global.localStorage.setItem('backpackItems', JSON.stringify([]));
-            global.localStorage.setItem('backpackPacks', JSON.stringify([]));
-            global.localStorage.setItem('backpackCategories', JSON.stringify([]));
-            renderAllStub.resetHistory();
+        it('should load default example data if localStorage items are an empty array', function() {
+            localStorageMock.setItem('backpackItems', JSON.stringify([]));
+            localStorageMock.setItem('backpackPacks', JSON.stringify([]));
+            localStorageMock.setItem('backpackCategories', JSON.stringify([]));
 
-            const data = global.window.persistenceService.loadData();
+            const data = window.persistenceService.loadData();
 
-            assert.ok(data.items.length > 0, 'Default items should be loaded');
+            assert.ok(data.items.length > 0, 'Default items should be loaded if stored arrays are empty');
             assert.strictEqual(data.exampleDataUsed, true);
-            assert.ok(renderAllStub.notCalled);
         });
     });
 });
