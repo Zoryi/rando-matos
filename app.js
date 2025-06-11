@@ -151,6 +151,14 @@ document.addEventListener('DOMContentLoaded', () => {
             window.itemDisplay = new window.appComponents.ItemDisplay(window.itemService, window.categoryService);
         } else { console.error("ItemDisplay class or its dependencies not found."); }
 
+        console.log("[app.js] Pre-PackDisplay Instantiation: typeof window.packService:", typeof window.packService);
+        console.log("[app.js] Pre-PackDisplay Instantiation: typeof window.itemService:", typeof window.itemService);
+        console.log("[app.js] Pre-PackDisplay Instantiation: typeof window.modalHandler:", typeof window.modalHandler);
+        if (window.appComponents) {
+            console.log("[app.js] Pre-PackDisplay Instantiation: typeof window.appComponents.PackDisplay:", typeof window.appComponents.PackDisplay);
+        } else {
+            console.log("[app.js] Pre-PackDisplay Instantiation: window.appComponents is MISSING!");
+        }
         if (window.appComponents && window.appComponents.PackDisplay) {
             window.packDisplay = new window.appComponents.PackDisplay(window.packService, window.itemService, window.modalHandler);
         } else { console.error("PackDisplay class or its dependencies not found."); }

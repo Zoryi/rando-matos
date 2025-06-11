@@ -4,6 +4,9 @@
 
     class PackDisplay {
         constructor(packService, itemService, modalHandler) {
+            console.log("[PackDisplay Constructor] Received packService type:", typeof packService);
+            console.log("[PackDisplay Constructor] Received itemService type:", typeof itemService);
+            console.log("[PackDisplay Constructor] Received modalHandler type:", typeof modalHandler);
             this.packService = packService;
             this.itemService = itemService;
             this.modalHandler = modalHandler; // To open/close the pack packing modal
