@@ -153,12 +153,18 @@
         }
 
         renderPackDetail(packId) {
+            console.log("[PackDisplay] renderPackDetail called with packId:", packId);
+            console.log("[PackDisplay] currentManagingPackId at start of renderPackDetail:", this.currentManagingPackId);
+
             if (!this.packDetailTitle || !this.itemsInPackList || !this.availableItemsList || !this.packService || !this.itemService) return;
-            this.currentManagingPackId = packId; // Ensure current pack ID is set
-            if (global.window) global.window.currentManagingPackId = packId; // Update global one too for now
+            this.currentManagingPackId = packId;
+            if (global.window) global.window.currentManagingPackId = packId;
 
             const pack = this.packService.getPackById(packId);
+            console.log("[PackDisplay] Fetched pack:", JSON.stringify(pack, null, 2));
+
             if (!pack) {
+                console.warn("[PackDisplay] Pack not found for ID:", packId);
                 if (global.navigationHandler) global.navigationHandler.showSection('manage-packs-section');
                 return;
             }
@@ -168,8 +174,21 @@
             this.availableItemsList.innerHTML = '';
 
             const allItems = this.itemService.getItems();
-            const itemsInThisPack = allItems.filter(item => item.packIds && item.packIds.includes(packId));
-            const availableItemsData = allItems.filter(item => !item.packIds || !item.packIds.includes(packId));
+            console.log("[PackDisplay] All items from itemService (first 5):", JSON.stringify(allItems.slice(0, 5), null, 2));
+            if (allItems.length > 0 && allItems[0]) { // Check if allItems[0] exists
+                 console.log("[PackDisplay] Example item.packIds from allItems[0]:", allItems[0].packIds);
+            }
+
+
+            const itemsInThisPack = allItems.filter(item => item.packIds && Array.isArray(item.packIds) && item.packIds.includes(packId));
+            console.log("[PackDisplay] Filtered itemsInThisPack (count):", itemsInThisPack.length);
+            console.log("[PackDisplay] Filtered itemsInThisPack (first 3):", JSON.stringify(itemsInThisPack.slice(0, 3), null, 2));
+
+
+            const availableItemsData = allItems.filter(item => !item.packIds || !Array.isArray(item.packIds) || !item.packIds.includes(packId));
+            console.log("[PackDisplay] Filtered availableItemsData (count):", availableItemsData.length);
+            console.log("[PackDisplay] Filtered availableItemsData (first 3):", JSON.stringify(availableItemsData.slice(0, 3), null, 2));
+
             const packTotalWeight = itemsInThisPack.reduce((sum, item) => sum + (item.weight || 0), 0);
             const totalInventoryWeight = allItems.reduce((sum, item) => sum + (item.weight || 0), 0);
 
