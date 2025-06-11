@@ -160,34 +160,65 @@
             this.currentManagingPackId = packId;
             if (global.window) global.window.currentManagingPackId = packId;
 
-            // Log all packs available in the service
-            const allPacksInService = this.packService.getPacks();
-            console.log("[PackDisplay] All packs in packService:", JSON.stringify(allPacksInService, null, 2));
-
-            // Log the specific pack before the null check
-            const pack = this.packService.getPackById(packId);
-            console.log("[PackDisplay] Result of packService.getPackById(packId):", JSON.stringify(pack, null, 2));
-
-            if (!pack) {
-                console.warn("[PackDisplay] Pack not found for ID:", packId, ". Aborting renderPackDetail.");
-                if (global.navigationHandler && typeof global.navigationHandler.showSection === 'function') {
-                    global.navigationHandler.showSection('manage-packs-section');
-                }
-                return;
+            // --- Logging for this.packService.getPacks() ---
+            console.log("[PackDisplay] Attempting to call this.packService.getPacks(). typeof this.packService:", typeof this.packService);
+            let allPacksInService;
+            try {
+                allPacksInService = this.packService.getPacks();
+                console.log("[PackDisplay] Raw allPacksInService:", allPacksInService); // Log raw object
+                console.log("[PackDisplay] All packs in packService (JSON):", JSON.stringify(allPacksInService, null, 2));
+            } catch (e) {
+                console.error("[PackDisplay] Error during this.packService.getPacks() or its JSON.stringify:", e);
+                allPacksInService = []; // Default to empty array to allow rest of function to proceed if possible for further logging
             }
 
-            this.packDetailTitle.textContent = `Détails du Pack : ${pack.name}`;
+            // --- Logging for this.packService.getPackById(packId) ---
+            console.log("[PackDisplay] Attempting to call this.packService.getPackById(packId). typeof this.packService:", typeof this.packService);
+            let pack;
+            try {
+                pack = this.packService.getPackById(packId);
+                console.log("[PackDisplay] Raw result of packService.getPackById(packId):", pack); // Log raw object
+                console.log("[PackDisplay] Result of packService.getPackById(packId) (JSON):", JSON.stringify(pack, null, 2));
+            } catch (e) {
+                console.error("[PackDisplay] Error during this.packService.getPackById(packId) or its JSON.stringify:", e);
+                pack = null; // Default to null
+            }
+
+            if (!pack) {
+                console.warn("[PackDisplay] Pack not found for ID:", packId, ". Aborting renderPackDetail further processing for this pack.");
+                // Optional: redirect only if pack is truly not found after trying to get it.
+                // if (global.navigationHandler && typeof global.navigationHandler.showSection === 'function') {
+                //     global.navigationHandler.showSection('manage-packs-section');
+                // }
+                // return; // Decide if we should return or try to render empty lists. For debugging, let's continue.
+            }
+
+            this.packDetailTitle.textContent = `Détails du Pack : ${pack ? pack.name : 'Pack Inconnu'}`; // Handle null pack case for name
             this.itemsInPackList.innerHTML = '';
             this.availableItemsList.innerHTML = '';
 
-            // Log all items available in the service before filtering
-            const allItems = this.itemService.getItems();
-            console.log("[PackDisplay] All items from itemService (count):", allItems.length);
-            console.log("[PackDisplay] All items from itemService (first 5):", JSON.stringify(allItems.slice(0, 5), null, 2));
-            if (allItems.length > 0 && allItems[0]) {
-                console.log("[PackDisplay] Example item.packIds from allItems[0]:", allItems[0].packIds);
-            } else if (allItems.length > 0 && !allItems[0]) {
-                console.log("[PackDisplay] allItems[0] is null or undefined despite allItems having length.");
+            // --- Logging for this.itemService.getItems() ---
+            console.log("[PackDisplay] Attempting to call this.itemService.getItems(). typeof this.itemService:", typeof this.itemService);
+            let allItems;
+            try {
+                allItems = this.itemService.getItems();
+                console.log("[PackDisplay] Raw allItems from itemService:", allItems); // Log raw object
+                console.log("[PackDisplay] All items from itemService (count):", allItems ? allItems.length : 'undefined/null');
+                if (allItems && allItems.length > 0) {
+                    console.log("[PackDisplay] All items from itemService (first 5 JSON):", JSON.stringify(allItems.slice(0, 5), null, 2));
+                    if (allItems[0]) {
+                        console.log("[PackDisplay] Example item.packIds from allItems[0]:", allItems[0].packIds);
+                    }
+                }
+            } catch (e) {
+                console.error("[PackDisplay] Error during this.itemService.getItems() or its JSON.stringify:", e);
+                allItems = []; // Default to empty array
+            }
+
+            // Ensure allItems is an array before filtering
+            if (!Array.isArray(allItems)) {
+                console.error("[PackDisplay] allItems is not an array after attempted fetch. Defaulting to empty array. Actual value:", allItems);
+                allItems = [];
             }
 
             const itemsInThisPack = allItems.filter(item => item && item.packIds && Array.isArray(item.packIds) && item.packIds.includes(packId));
@@ -200,6 +231,9 @@
 
             const packTotalWeight = itemsInThisPack.reduce((sum, item) => sum + (item.weight || 0), 0);
             const totalInventoryWeight = allItems.reduce((sum, item) => sum + (item.weight || 0), 0);
+
+            // Add a final log to confirm the rendering part is reached
+            console.log("[PackDisplay] Proceeding to populate DOM lists for pack details.");
 
             if (itemsInThisPack.length === 0) {
                 this.itemsInPackList.innerHTML = '<li class="text-center text-gray-500">Aucun item dans ce pack.</li>';
