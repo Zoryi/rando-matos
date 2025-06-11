@@ -24,7 +24,7 @@
         try {
             const response = await fetch(apiUrl, { // fetch is global in browser
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload)
             });
 
@@ -64,7 +64,7 @@
         try {
             const response = await fetch(apiUrl, { // fetch is global in browser
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(imagePayload)
             });
 
