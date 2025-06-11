@@ -22,7 +22,7 @@
         const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
         try {
-            const response = await fetch(apiUrl, { // fetch is global in browser
+            const response = await fetch(apiUrl, {
                 method: 'POST',
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload)
@@ -50,7 +50,7 @@
         } catch (error) {
             console.error('Error calling Gemini API:', error);
             if (typeof global.alert === 'function') {
-                global.alert('Erreur lors de l'appel à l\'IA : ' + error.message);
+                global.alert("Erreur lors de l'appel à l'IA : " + error.message); // Changed quotes
             }
             return null;
         }
@@ -62,7 +62,7 @@
         const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
 
         try {
-            const response = await fetch(apiUrl, { // fetch is global in browser
+            const response = await fetch(apiUrl, {
                 method: 'POST',
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(imagePayload)
