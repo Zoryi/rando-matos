@@ -9,10 +9,11 @@
             this.itemDisplay = itemDisplay; // Instance of ItemDisplay
             this.packDisplay = packDisplay; // Instance of PackDisplay
             this.categoryDisplay = categoryDisplay; // Instance of CategoryDisplay
-            // Below are not strictly for navigation's showSection, but showSection calls render functions
-            // that will eventually be on these components. We pass them for future refactoring of showSection.
-            // For now, showSection might still call global render functions.
-            // Or, more directly, showSection might need to call methods on these display components.
+            this.formHandler = formHandler; // Instance of FormHandler (or null)
+            this.modalHandler = modalHandler; // Instance of ModalHandler
+            this.aiFeaturesUI = aiFeaturesUI; // Instance of AiFeaturesUI (or null)
+            // Note: formHandler and aiFeaturesUI are not actively used by NavigationHandler yet,
+            // but are included for future consistency if NavigationHandler needs to coordinate with them.
 
             this.currentView = 'inventory-section'; // Default view
 
@@ -33,7 +34,19 @@
         // It will need further refactoring to call methods on display components
         // instead of global render functions if those components take over rendering.
         showSection(sectionId) {
-            // console.log('NavigationHandler.showSection called with:', sectionId); // Debug log removed
+            // Close edit item modal if it's open
+            if (this.modalHandler &&
+                this.modalHandler.editItemModal &&
+                this.modalHandler.editItemModal.style.display === 'block') {
+                this.modalHandler.closeEditModal();
+            }
+
+            // Close pack packing modal if it's open
+            if (this.modalHandler &&
+                this.modalHandler.packPackingModal &&
+                !this.modalHandler.packPackingModal.classList.contains('hidden')) {
+                this.modalHandler.closePackPackingModal();
+            }
 
             this.contentSections.forEach(section => {
                 if (section.id === sectionId) {
