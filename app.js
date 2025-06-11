@@ -166,6 +166,17 @@ document.addEventListener('DOMContentLoaded', () => {
             );
         } else { console.error("FormHandler class or its dependencies not found."); }
 
+        // Logging for AiFeaturesUI dependencies
+        console.log('Pre-AiFeaturesUI check - window.apiService:', typeof window.apiService, window.apiService ? 'Exists' : 'MISSING!');
+        console.log('Pre-AiFeaturesUI check - window.itemService:', typeof window.itemService, window.itemService ? 'Exists' : 'MISSING!');
+        console.log('Pre-AiFeaturesUI check - window.categoryService:', typeof window.categoryService, window.categoryService ? 'Exists' : 'MISSING!');
+        console.log('Pre-AiFeaturesUI check - window.uiUtils:', typeof window.uiUtils, window.uiUtils ? 'Exists' : 'MISSING!');
+        if (window.appComponents) {
+            console.log('Pre-AiFeaturesUI check - window.appComponents.AiFeaturesUI:', typeof window.appComponents.AiFeaturesUI, window.appComponents.AiFeaturesUI ? 'Class Exists' : 'Class MISSING!');
+        } else {
+            console.log('Pre-AiFeaturesUI check - window.appComponents: MISSING!');
+        }
+
         if (window.appComponents && window.appComponents.AiFeaturesUI && window.apiService && window.uiUtils) {
             new window.appComponents.AiFeaturesUI(window.apiService, window.itemService, window.categoryService, window.uiUtils);
         } else { console.error("AiFeaturesUI class or its dependencies not found."); }
