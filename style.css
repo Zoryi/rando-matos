@@ -1,0 +1,779 @@
+body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f4f7f6; /* Light background */
+            color: #333;
+            margin: 0; /* Remove default body margin */
+            padding: 0;
+            display: flex; /* Use flexbox for layout */
+            min-height: 100vh; /* Minimum height of the viewport */
+        }
+        .sidebar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: auto;
+            min-height: 65px; /* Ensure minimum touch target area */
+            background-color: #e9ecef; /* Light sidebar background */
+            padding: 10px 0; /* Adjust as needed, less vertical padding */
+            box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.1); /* Shadow on top */
+            display: flex;
+            flex-direction: row;
+            align-items: center; /* To vertically align items if height is auto or larger */
+            z-index: 1000; /* Ensure sidebar is on top */
+        }
+        .sidebar h2 {
+            display: none; /* Title not suitable for bottom nav bar */
+        }
+        .sidebar nav ul {
+            list-style: none;
+            padding: 0;
+            display: flex;
+            flex-direction: row;
+            justify-content: space-around; /* or space-evenly for different spacing */
+            width: 100%; /* Ensure it spans the full width of the sidebar */
+        }
+        .sidebar nav ul li {
+            margin-bottom: 0; /* Remove bottom margin as items are in a row */
+            flex-grow: 1;
+            flex-basis: 0;
+        }
+        .sidebar nav ul li a {
+            display: flex; /* Use flex for icon and text alignment */
+            flex-direction: column; /* Icon over text */
+            align-items: center;
+            justify-content: center; /* Center content vertically */
+            padding: 10px 5px; /* Increase clickable area and vertical spacing */
+            color: #333;
+            text-decoration: none;
+            border-radius: 8px; /* Rounded corners for menu items */
+            transition: background-color 0.3s ease;
+            font-size: 0.85rem; /* Increase font size */
+            text-align: center; /* Center text if it wraps */
+        }
+         .sidebar nav ul li a i {
+             margin-right: 0; /* Remove margin as icon is above text */
+             margin-bottom: 4px; /* Space between icon and text */
+             font-size: 1.6em; /* Increase icon size */
+         }
+        .sidebar nav ul li a:hover {
+            background-color: #d0d4d8; /* Slightly darker on hover */
+        }
+        .sidebar nav ul li a.active {
+            background-color: #0077b6; /* Active item background */
+            color: white;
+        }
+         .sidebar nav ul li a.active .menu-weight {
+             color: rgba(255, 255, 255, 0.8); /* Lighter weight text in active state */
+         }
+
+        .main-content {
+            flex-grow: 1; /* Main content takes remaining space */
+            padding: 20px;
+            overflow-y: auto; /* Enable scrolling if content overflows */
+            padding-bottom: 75px; /* Adjusted to prevent overlap */
+        }
+        .content-section {
+             background-color: #fff;
+             padding: 30px;
+             border-radius: 15px;
+             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+             margin-bottom: 20px; /* Add margin between sections if multiple are visible (though we will hide them) */
+        }
+
+        h1 {
+            color: #005f73; /* A clean blue */
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        h2 {
+            color: #0077b6; /* A vibrant blue */
+            margin-bottom: 15px;
+            border-bottom: 1px solid #ccc;
+            padding-bottom: 5px;
+        }
+         h3 {
+            color: #023e8a; /* Darker blue */
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+        /* --- Form Styling --- */
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); /* Adjusted grid for form */
+            gap: 20px; /* Increased gap */
+            margin-bottom: 20px;
+        }
+         .form-group {
+             display: flex;
+             flex-direction: column; /* Stack label and input */
+         }
+         .form-group label {
+             margin-bottom: 5px;
+             font-weight: 600;
+             color: #555;
+         }
+        .form-group input[type="text"],
+        .form-group input[type="number"],
+        .form-group input[type="url"],
+        .form-group select {
+            width: 100%;
+            padding: 12px; /* Increased padding */
+            border: 1px solid #ccc;
+            border-radius: 8px; /* More rounded corners */
+            font-size: 1rem;
+             transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+         .form-group input[type="text"]:focus,
+         .form-group input[type="number"]:focus,
+         .form-group input[type="url"]:focus,
+         .form-group select:focus {
+             border-color: #0077b6; /* Highlight on focus */
+             box-shadow: 0 0 5px rgba(0, 119, 182, 0.3);
+             outline: none; /* Remove default outline */
+         }
+
+         .checkbox-group {
+             display: flex;
+             align-items: center;
+             gap: 10px;
+             margin-top: 10px; /* Space above checkbox */
+         }
+         .checkbox-group input[type="checkbox"] {
+             width: 20px;
+             height: 20px;
+             cursor: pointer;
+             border-radius: 4px;
+             border: 1px solid #ccc;
+             appearance: none; /* Hide default checkbox */
+             -webkit-appearance: none;
+             -moz-appearance: none;
+             position: relative;
+             transition: background-color 0.3s ease, border-color 0.3s ease;
+         }
+         .checkbox-group input[type="checkbox"]:checked {
+             background-color: #06d6a0; /* Green when checked */
+             border-color: #06d6a0;
+         }
+          .checkbox-group input[type="checkbox"]:checked::after {
+             content: '\2713'; /* Checkmark symbol */
+             position: absolute;
+             top: 50%;
+             left: 50%;
+             transform: translate(-50%, -50%);
+             color: white;
+             font-size: 14px;
+             font-weight: bold;
+          }
+
+        .form-button {
+            width: auto; /* Button width based on content */
+            padding: 12px 25px; /* Increased padding */
+            background-color: #0077b6; /* A vibrant blue */
+            color: white;
+            border: none;
+            border-radius: 8px; /* More rounded corners */
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.1s ease;
+            font-size: 1.1rem;
+            font-weight: 600;
+            display: block; /* Make button a block element for full width on small screens */
+            margin-top: 20px; /* Space above the button */
+        }
+         @media (min-width: 640px) {
+             .form-button {
+                 display: inline-block; /* Back to inline-block on larger screens */
+             }
+         }
+
+
+        .form-button:hover {
+            background-color: #023e8a; /* Darker blue on hover */
+        }
+         .form-button:active {
+             transform: scale(0.98); /* Slightly shrink on click */
+         }
+
+        /* --- Existing Styles --- */
+        .input-group { /* Generic input group style */
+             display: flex;
+             gap: 15px;
+             margin-bottom: 15px;
+        }
+        .input-group input[type="text"] {
+             flex-grow: 1;
+             padding: 10px;
+             border: 1px solid #ccc;
+             border-radius: 5px;
+             font-size: 1rem;
+        }
+         .input-group button {
+             padding: 10px 20px;
+             background-color: #00b4d8; /* Cyan */
+             color: white;
+             border: none;
+             border-radius: 5px;
+             cursor: pointer;
+             transition: background-color 0.3s ease;
+         }
+         .input-group button:hover {
+             background-color: #48cae4; /* Lighter cyan on hover */
+         }
+
+
+        .item-list, .pack-list, .category-list {
+            list-style: none;
+            padding: 0;
+        }
+        .item, .pack-item, .category-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 10px; /* Increased padding for better bar visibility */
+            border-bottom: 1px solid #ccc;
+            position: relative; /* Needed for absolute positioning of bar graph */
+             overflow: hidden; /* Hide overflow from bar graph */
+             min-height: 40px; /* Ensure minimum height for bar */
+        }
+        .item:last-child, .pack-item:last-child, .category-item:last-child {
+            border-bottom: none;
+        }
+
+        .item-details, .pack-details, .category-details {
+            flex-grow: 1;
+            margin-right: 15px;
+            z-index: 1; /* Ensure details are above the bar graph */
+            /* Removed semi-transparent background */
+            /* Removed padding-right */
+             display: flex; /* Use flexbox for details to align image */
+             align-items: center; /* Vertically center items */
+        }
+        .item-details img {
+            margin-right: 10px; /* Space between image and text */
+        }
+
+        .item-name, .pack-name, .category-name {
+            font-weight: 600;
+        }
+        .item-weight, .pack-weight, .category-weight {
+            font-size: 0.9rem;
+            color: #555;
+        }
+         .item-brand, .item-category, .item-tags, .item-capacity, .item-consumable {
+             font-size: 0.8rem;
+             color: #666;
+             margin-left: 5px;
+         }
+        .item-actions, .pack-actions, .category-actions {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            z-index: 1; /* Ensure actions are above the bar graph */
+            /* Removed semi-transparent background */
+            /* Removed padding-left */
+        }
+        .item-actions button, .pack-actions button, .category-actions button {
+            padding: 5px 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        .pack-button {
+            background-color: #00b4d8; /* Cyan */
+            color: white;
+        }
+        .pack-button:hover {
+            background-color: #48cae4; /* Lighter cyan on hover */
+        }
+        .packed .pack-button {
+            background-color: #06d6a0; /* Green when packed */
+        }
+        .packed .pack-button:hover {
+             background-color: #80ed99; /* Lighter green on hover */
+        }
+        .delete-button {
+            background-color: #ef476f; /* Red */
+            color: white;
+        }
+        .delete-button:hover {
+            background-color: #ff7096; /* Lighter red on hover */
+        }
+         .edit-button {
+             background-color: #ffb703; /* Yellow/Orange */
+             color: white;
+         }
+         .edit-button:hover {
+             background-color: #ffc300; /* Lighter yellow/orange on hover */
+         }
+        .view-pack-button, .view-category-button {
+             background-color: #90e0ef; /* Light blue */
+             color: #023e8a;
+        }
+         .view-pack-button:hover, .view-category-button:hover {
+             background-color: #ade8f4;
+         }
+
+        .total-weight {
+            text-align: right;
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 2px solid #ccc;
+        }
+        .packed-status {
+            font-size: 0.9rem;
+            color: #06d6a0; /* Green */
+            font-weight: 600;
+        }
+         .not-packed-status {
+            font-size: 0.9rem;
+            color: #ef476f; /* Red */
+            font-weight: 600;
+        }
+
+        /* --- Improved Weight Bar Styling --- */
+        .weight-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            /* Use a subtle gradient */
+            background: linear-gradient(to right, rgba(0, 119, 182, 0.1), rgba(0, 119, 182, 0.3));
+            width: 0%; /* Will be set by JS */
+            z-index: 0; /* Behind the content */
+            transition: width 0.5s ease-in-out;
+            border-radius: 8px; /* Rounded corners for the bar */
+        }
+
+         /* Style for packed items/packs/categories */
+         .packed .weight-bar {
+             background: linear-gradient(to right, rgba(6, 214, 160, 0.1), rgba(6, 214, 160, 0.3)); /* Green gradient for packed */
+         }
+
+
+        .pack-packing-view {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #caf0f8; /* Lighter blue background */
+            border-radius: 8px;
+            border: 1px dashed #00b4d8;
+        }
+        .pack-packing-view h3 {
+            margin-top: 0;
+            border-bottom: 1px dashed #00b4d8;
+            padding-bottom: 5px;
+        }
+        .pack-packing-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px dotted #90e0ef;
+        }
+        .pack-packing-item:last-child {
+            border-bottom: none;
+        }
+        .pack-packing-item .item-name {
+            flex-grow: 1;
+            margin-right: 10px;
+        }
+        .pack-packing-item input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+         /* Hide content sections by default, show only the active one */
+         .content-section {
+             display: none;
+         }
+         .content-section.active {
+             display: block;
+         }
+
+         .menu-weight {
+             margin-left: auto; /* Push weight to the right */
+             font-size: 0.9rem;
+             color: #555;
+         }
+
+          /* Responsive adjustments */
+         @media (max-width: 768px) {
+             /* body flex-direction: column; might not be needed anymore if sidebar is fixed bottom */
+             /* .sidebar width: 100% and height: auto are now default, so they can be removed if only for this */
+             /* .sidebar nav ul adjustments may not be needed or may need to align with new base row direction */
+             /* .sidebar nav ul li a adjustments may be redundant */
+
+             /* Example: If you want menu items to wrap on very small screens for the bottom bar */
+             /* .sidebar nav ul { flex-wrap: wrap; justify-content: center; } */
+
+             .menu-weight {
+                 /* Adjustments for menu weight if it was previously affected by sidebar changes */
+                 /* For instance, if it was hidden or repositioned, check its appearance in bottom nav */
+                 font-size: 0.7rem; /* Adjusted font-size */
+                 margin-left: 0; /* If it was pushed by auto margin */
+                 margin-top: 3px; /* Adjusted margin-top */
+             }
+             .main-content {
+                 padding: 15px; /* Adjust padding for smaller screens */
+                 padding-bottom: 75px; /* Ensure enough space for bottom nav on mobile - Adjusted */
+             }
+             .content-section {
+                 padding: 20px; /* Adjust padding */
+             }
+             /* .sidebar h2 { display: none; } is now a base style */
+         }
+
+
+         /* Modal styles */
+         .modal {
+             display: none; /* Hidden by default */
+             position: fixed; /* Stay in place */
+             z-index: 100; /* Sit on top */
+             left: 0;
+             top: 0;
+             width: 100%; /* Full width */
+             height: 100%; /* Full height */
+             overflow: auto; /* Enable scroll if needed */
+             background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+         }
+
+         .modal-content {
+             background-color: #fefefe;
+             margin: 10% auto; /* 10% from the top and centered */
+             padding: 20px;
+             border: 1px solid #888;
+             width: 80%; /* Could be more or less, depending on screen size */
+             max-width: 600px; /* Max width for larger screens */
+             border-radius: 10px;
+             box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+         }
+
+         .close-button {
+             color: #aaa;
+             float: right;
+             font-size: 28px;
+             font-weight: bold;
+         }
+
+         .close-button:hover,
+         .close-button:focus {
+             color: #000;
+             text-decoration: none;
+             cursor: pointer;
+         }
+
+        /* --- Pack Detail Page Styles --- */
+        .pack-detail-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr; /* Two columns */
+            gap: 30px; /* Space between columns */
+        }
+
+        .pack-detail-column h3 {
+            margin-top: 0;
+            border-bottom: 1px solid #ccc;
+            padding-bottom: 5px;
+        }
+
+        .pack-detail-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px; /* Adjusted padding for bar */
+            border-bottom: 1px dotted #eee;
+            position: relative; /* Needed for absolute positioning of bar graph */
+            overflow: hidden; /* Hide overflow from bar graph */
+            min-height: 40px; /* Ensure minimum height for bar */
+        }
+         .pack-detail-item:last-child {
+             border-bottom: none;
+         }
+
+        .pack-detail-item-name {
+            flex-grow: 1;
+            margin-right: 10px;
+            z-index: 1; /* Ensure details are above the bar graph */
+        }
+
+        .pack-detail-actions {
+             display: flex;
+             gap: 5px; /* Space between buttons */
+             align-items: center;
+             z-index: 1; /* Ensure actions are above the bar graph */
+        }
+
+        .pack-detail-actions button {
+             padding: 5px 10px;
+             border: none;
+             border-radius: 5px;
+             cursor: pointer;
+             transition: background-color 0.3s ease;
+        }
+
+        .add-to-pack-button {
+             background-color: #06d6a0; /* Green */
+             color: white;
+        }
+         .add-to-pack-button:hover {
+             background-color: #80ed99; /* Lighter green */
+         }
+
+        .remove-from-pack-button {
+             background-color: #ef476f; /* Red */
+             color: white;
+        }
+         .remove-from-pack-button:hover {
+             background-color: #ff7096; /* Lighter red */
+         }
+
+         .pack-item-packed-button {
+             background-color: #00b4d8; /* Cyan */
+             color: white;
+         }
+         .pack-item-packed-button:hover {
+             background-color: #48cae4; /* Lighter cyan on hover */
+         }
+         .pack-detail-item.packed .pack-item-packed-button {
+             background-color: #06d6a0; /* Green when packed */
+         }
+         .pack-detail-item.packed .pack-item-packed-button:hover {
+             background-color: #80ed99; /* Lighter green on hover */
+         }
+
+        .unpack-all-button {
+            background-color: #ffb703; /* Yellow/Orange */
+            color: white;
+            padding: 8px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            margin-bottom: 20px; /* Space below button */
+        }
+         .unpack-all-button:hover {
+             background-color: #ffc300; /* Lighter yellow/orange */
+         }
+
+        /* Category Management Styles */
+        .category-management-list .category-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 10px;
+            background-color: #e9ecef; /* Light background for category header */
+            border-bottom: 1px solid #ccc;
+            font-weight: 600;
+            cursor: pointer; /* Indicate clickable */
+            border-radius: 8px;
+            margin-bottom: 5px;
+        }
+        .category-management-list .category-header:hover {
+            background-color: #d0d4d8;
+        }
+        .category-management-list .category-content {
+            display: none; /* Hidden by default */
+            padding-left: 20px; /* Indent items */
+            border-left: 2px solid #0077b6; /* Visual indicator */
+            margin-bottom: 10px;
+        }
+        .category-management-list .category-content.is-visible {
+            display: block;
+        }
+         .category-management-list .category-content .item {
+             padding: 8px 0; /* Smaller padding for items within category */
+             border-bottom: 1px dotted #eee;
+         }
+         .category-management-list .category-content .item:last-child {
+             border-bottom: none;
+         }
+         .category-management-list .category-header .category-name {
+             flex-grow: 1;
+         }
+         .category-management-list .category-header .category-item-count {
+             font-size: 0.9rem;
+             color: #555;
+         }
+
+        /* Styles for LLM features */
+        .llm-button {
+             background-color: #6a0572; /* Deep purple */
+             color: white;
+             padding: 8px 15px;
+             border: none;
+             border-radius: 8px;
+             cursor: pointer;
+             transition: background-color 0.3s ease, transform 0.1s ease;
+             font-size: 0.9rem;
+             font-weight: 600;
+             margin-top: 10px;
+             margin-right: 10px; /* Space between buttons */
+         }
+         .llm-button:hover {
+             background-color: #92209d; /* Lighter purple on hover */
+         }
+         .llm-button:active {
+             transform: scale(0.98);
+         }
+         .llm-loading-indicator {
+             margin-left: 10px;
+             font-style: italic;
+             color: #6a0572;
+         }
+
+        #generate-pack-modal {
+            display: none;
+        }
+        #generated-items-list li {
+            background-color: #f8f8f8;
+            padding: 8px;
+            border-radius: 5px;
+            margin-bottom: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+         #generated-items-list li .item-name {
+             font-weight: bold;
+         }
+         #generated-items-list li .item-details {
+             font-size: 0.9em;
+             color: #555;
+         }
+         #generated-items-list li button {
+             padding: 5px 10px;
+             background-color: #06d6a0;
+             color: white;
+             border: none;
+             border-radius: 5px;
+             cursor: pointer;
+             transition: background-color 0.3s ease;
+         }
+         #generated-items-list li button:hover {
+             background-color: #80ed99;
+         }
+
+        /* Explicitly ensure form elements are visible within generate-pack-section */
+        #generate-pack-section .form-grid {
+            display: grid !important; /* Force grid display for the container */
+            visibility: visible !important;
+            opacity: 1 !important;
+        }
+
+        #generate-pack-section .form-group {
+            display: flex !important; /* Force flex display for each form group */
+            visibility: visible !important;
+            opacity: 1 !important;
+        }
+
+        #generate-pack-section input[type="text"],
+        #generate-pack-section input[type="number"] {
+            display: block !important; /* Force block display for inputs */
+            visibility: visible !important;
+            opacity: 1 !important;
+        }
+
+        #generate-pack-section button#generate-pack-list-button {
+            display: inline-block !important; /* Force inline-block for the button */
+            visibility: visible !important;
+            opacity: 1 !important;
+        }
+
+        .item-suggestion.existing-item {
+            background-color: #e0f2f7; /* Light blue for existing items */
+            border: 1px solid #0077b6;
+        }
+
+        .item-suggestion.existing-item .add-generated-item-checkbox {
+            display: none; /* Hide checkbox for existing items */
+        }
+
+
+        @media (max-width: 768px) {
+             .pack-detail-grid {
+                 grid-template-columns: 1fr; /* Stack columns on small screens */
+             }
+
+            .item-details .item-brand,
+            .item-details .item-category,
+            .item-details .item-tags,
+            .item-details .item-capacity,
+            .item-details .item-consumable {
+                display: none;
+            }
+
+            .item-details { /* mobile */
+                display: grid;
+                grid-template-columns: auto 1fr; /* Col1 for image, Col2 for text */
+                grid-template-rows: auto auto;    /* Row1 for name, Row2 for weight */
+                column-gap: 8px; /* Replaces img margin-right */
+                align-items: flex-start; /* Align items at the start of their grid area */
+                flex-grow: 1; /* Keep this from original flex item behavior */
+                margin-right: 10px; /* Keep this */
+                min-width: 0; /* Keep this */
+            }
+
+            .item-actions { /* For mobile view specifically within @media */
+                flex-shrink: 0; /* Prevent this container from shrinking */
+                gap: 5px; /* Reduce gap from 10px */
+            }
+            .item-actions button { /* For mobile view specifically within @media */
+                padding: 4px 8px; /* Reduce padding from 5px 10px */
+                font-size: 0.8rem; /* Slightly smaller font for buttons */
+            }
+
+            .form-grid {
+                grid-template-columns: 1fr; /* Single column layout */
+                gap: 15px; /* Optionally reduce gap slightly for single column */
+            }
+
+            /* .sidebar h2 { display: none; } is now a base style, already handled */
+
+            .item-details img { /* mobile */
+                grid-column: 1;
+                grid-row: 1 / span 2; /* Image spans both text rows */
+                width: 2.5rem;
+                height: 2.5rem;
+                margin-right: 0; /* Gap handles spacing now */
+            }
+
+            .pack-name, .category-name { /* .item-name removed from this group */
+                font-size: 0.9rem; /* Slightly reduced from default */
+            }
+            .item-name { /* mobile */
+                grid-column: 2;
+                grid-row: 1;
+                font-size: 0.9rem;
+                /* display: block; is fine, or can be removed as grid item placement controls layout */
+            }
+            .pack-weight, .category-weight { /* .item-weight removed from this group */
+                font-size: 0.8rem; /* Slightly reduced from default 0.9rem */
+                color: #555; /* Ensure color is maintained if not inherited */
+            }
+            .item-weight { /* mobile */
+                grid-column: 2;
+                grid-row: 2;
+                font-size: 0.8rem;
+                color: #555;
+                margin-left: 0; /* Keep this */
+                /* display: block; is fine, or can be removed */
+            }
+
+            .item, .pack-item, .category-item {
+                padding: 10px; /* Reduced from 15px 10px */
+                /* min-height: 36px; Optional: consider if 40px is too much after other changes */
+            }
+        }
+
+        .image-preview {
+            width: 80px; /* Adjust size as needed */
+            height: 80px; /* Adjust size as needed */
+            border-radius: 8px; /* Rounded corners for preview */
+            object-fit: cover; /* Cover the area */
+            border: 1px solid #ddd;
+            margin-top: 10px; /* Space below input */
+            display: block; /* Ensure it takes its own line */
+            background-color: #f0f0f0; /* Light background for empty/broken image */
+        }
