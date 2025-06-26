@@ -44,11 +44,18 @@
         },
 
         deleteCategory: function(categoryName, confirmFunc) {
+            if (!global.itemService) {
+                console.error("CategoryService: itemService is not available.");
+                return false;
+            }
             const categoryIndex = categories.findIndex(cat => cat.name === categoryName);
-            if (categoryIndex === -1) return false;
+            if (categoryIndex === -1) {
+                console.warn("CategoryService: Category not found for deletion:", categoryName);
+                return false;
+            }
 
-            const currentItems = (global.window && global.window.items) ? global.window.items : [];
-            const itemsInCategory = currentItems.filter(item => item.category === categoryName);
+            const allItems = global.itemService.getItems();
+            const itemsInCategory = allItems.filter(item => item.category === categoryName);
             let doDelete = true;
 
             if (confirmFunc && typeof confirmFunc === 'function') {
@@ -60,20 +67,35 @@
             }
 
             if (doDelete) {
-                categories.splice(categoryIndex, 1);
-                // Update items in the global window.items array
-                if (global.window && global.window.items && Array.isArray(global.window.items)) {
-                    global.window.items = global.window.items.map(item => {
-                        if (item.category === categoryName) {
-                            return { ...item, category: '' }; // Clear category
+                categories.splice(categoryIndex, 1); // Modify internal categories list
+
+                // let allItemUpdatesSucceeded = true; // Keep track if all items saved correctly
+                if (itemsInCategory.length > 0) {
+                    itemsInCategory.forEach(item => {
+                        const updatedItemData = { ...item, category: '' }; // Clear category
+                        if (!global.itemService.saveEditedItem(item.id, updatedItemData)) {
+                            console.error("CategoryService: Failed to update item during category deletion:", item.id);
+                            // allItemUpdatesSucceeded = false;
+                            // Decide if this failure should halt or change return value. For now, it continues.
                         }
-                        return item;
                     });
                 }
-                const updatedItems = (global.window && global.window.items) ? global.window.items : [];
-                const currentPacks = (global.window && global.window.packs) ? global.window.packs : [];
-                persistence.saveData(updatedItems, currentPacks, categories);
-                return true;
+
+                // Persist the changes.
+                // itemService.saveEditedItem would have persisted item changes.
+                // This call primarily ensures category deletion is saved, along with the latest overall state.
+                const finalItemsForPersistence = global.itemService.getItems().map(i => ({...i}));
+                const currentPacks = (global.packService) ? global.packService.getPacks().map(p => ({...p})) : [];
+                // 'categories' is the updated local array. Ensure it's plain objects for persistence.
+                const plainCategories = categories.map(cat => ({...cat}));
+
+                if (persistence) {
+                     persistence.saveData(finalItemsForPersistence, currentPacks, plainCategories);
+                } else {
+                    console.error("CategoryService: persistenceService not available in deleteCategory.");
+                }
+
+                return true; // Category deletion processed.
             }
             return false;
         }

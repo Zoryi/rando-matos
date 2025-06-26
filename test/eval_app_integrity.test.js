@@ -49,14 +49,19 @@ describe('Application Initialization Integrity Test', function() {
 
     beforeEach(function() {
         const html = '<!DOCTYPE html><html><head></head><body>' +
-        // Minimal DOM required by app.js init or component instantiations if any query at load time
-        // Most components get DOM elements by ID after they are instantiated.
-        // Add essential elements if app.js top-level or initApp expects them.
-        // Based on current app.js, these are queried for NavigationHandler:
-        '<nav><ul><li><a href="#" data-section="inventory">Inventory</a></li></ul></nav>' +
-        '<div class="main-content"><section id="inventory-section"></section></div>' +
-        // Add other minimal elements if initApp directly touches them before components take over
-        '</body></html>';
+          '<div class="sidebar"><nav><ul><li><a href="#" data-section="inventory">Inventory</a></li></ul></nav></div>' +
+          '<div class="main-content"><section id="inventory-section" class="content-section"></section></div>' +
+          // Minimal elements for other UI components if they query on instantiation
+          '<div id="item-list"></div>' +
+          '<div id="pack-list"></div>' +
+          '<div id="category-management-list"></div>' +
+          '<div id="item-form-modal"><form id="add-item-form"></form></div>' +
+          '<div id="edit-item-modal"><form id="edit-item-form"></form></div>' +
+          '<div id="pack-form-modal"><form id="add-pack-form"></form></div>' +
+          '<div id="category-form-modal"><form id="add-category-form"></form></div>' +
+          '<div id="pack-packing-modal"><div id="pack-packing-list"></div></div>' +
+          '<select id="item-category"></select><select id="edit-item-category"></select><select id="view-filter"></select>' +
+          '</body></html>';
 
         dom = new JSDOM(html, {
             url: "http://localhost",
@@ -70,7 +75,12 @@ describe('Application Initialization Integrity Test', function() {
         global.localStorage = window.localStorage; // JSDOM's localStorage
         global.alert = alertStub = sinon.stub();
         global.confirm = confirmStub = sinon.stub().returns(true);
-        global.fetch = fetchStub = sinon.stub().resolves({ ok: true, json: () => Promise.resolve({}) });
+
+        // Mock fetch globally and on the window object for JSDOM
+        const mockFetchResponse = { ok: true, json: () => Promise.resolve({}), text: () => Promise.resolve("mocked text") };
+        global.fetch = sinon.stub().resolves(mockFetchResponse);
+        window.fetch = global.fetch; // Make JSDOM window.fetch use the same global stub
+        fetchStub = global.fetch; // Keep variable for any test that might use it
 
         // Evaluate all scripts in order
         try {

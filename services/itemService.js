@@ -74,20 +74,40 @@
             if (itemIndex === -1) return null;
 
             const originalItem = items[itemIndex];
-            items[itemIndex] = {
-                ...originalItem, // Preserve existing packIds, packed status etc.
-                name: updatedData.name.trim(),
-                weight: parseFloat(updatedData.weight),
-                brand: updatedData.brand !== undefined ? updatedData.brand : originalItem.brand,
-                category: updatedData.category !== undefined ? updatedData.category : originalItem.category,
-                tags: updatedData.tags !== undefined ? (Array.isArray(updatedData.tags) ? updatedData.tags : ((typeof updatedData.tags === 'string' && updatedData.tags.trim()) ? updatedData.tags.split(',').map(t => t.trim()) : [])) : originalItem.tags,
-                capacity: updatedData.capacity !== undefined ? updatedData.capacity : originalItem.capacity,
-                imageUrl: updatedData.imageUrl !== undefined ? updatedData.imageUrl : originalItem.imageUrl,
-                isConsumable: updatedData.isConsumable !== undefined ? !!updatedData.isConsumable : originalItem.isConsumable,
+            // Merge updatedData with originalItem, updatedData takes precedence
+            const mergedData = {
+                ...originalItem,
+                ...updatedData
             };
-            const currentPacks = (global.window && global.window.packs) ? global.window.packs : [];
-            const currentCategories = (global.window && global.window.categories) ? global.window.categories : [];
-            persistence.saveData(items, currentPacks, currentCategories);
+
+            // Assign to items array, ensuring specific fields are correctly formatted
+            items[itemIndex] = {
+                ...mergedData, // Start with all merged fields (id, packIds, packed, etc.)
+                name: mergedData.name ? mergedData.name.trim() : '', // Ensure name is a string and trimmed
+                weight: parseFloat(mergedData.weight) || 0, // Ensure weight is a number
+                // Ensure tags are an array, handling various input possibilities
+                tags: mergedData.tags !== undefined ?
+                      (Array.isArray(mergedData.tags) ? mergedData.tags :
+                      ((typeof mergedData.tags === 'string' && mergedData.tags.trim()) ? mergedData.tags.split(',').map(t => t.trim()) : []))
+                      : [], // Default to empty array if tags is undefined
+                // Ensure boolean fields are booleans
+                isConsumable: !!mergedData.isConsumable,
+                packed: !!mergedData.packed,
+                // Ensure packIds is an array
+                packIds: Array.isArray(mergedData.packIds) ? mergedData.packIds : [],
+            };
+
+            // Correctly use service layer for persistence data
+            const plainItems = items.map(item => ({...item}));
+            const currentPacks = (global.packService) ? global.packService.getPacks().map(p => ({...p})) : [];
+            const currentCategories = (global.categoryService) ? global.categoryService.getCategories().map(c => ({...c})) : [];
+
+            if (persistence) { // Use the already defined persistence const from top of the file
+                persistence.saveData(plainItems, currentPacks, currentCategories);
+            } else {
+                console.error("ItemService: persistenceService not available in saveEditedItem.");
+                return null; // Indicate failure if persistence is not available
+            }
             return JSON.parse(JSON.stringify(items[itemIndex])); // Return a copy
         }
     };

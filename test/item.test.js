@@ -52,7 +52,11 @@ describe('ItemService Tests', function() {
 
         alertStub = sinon.stub(window, 'alert');
         mockConfirm = sinon.stub(window, 'confirm');
-        sinon.stub(window, 'fetch').resolves({ ok: true, json: () => Promise.resolve({}) });
+
+        // Mock fetch globally and on the window object for JSDOM
+        const mockFetchResponse = { ok: true, json: () => Promise.resolve({}), text: () => Promise.resolve("mocked text") };
+        global.fetch = sinon.stub().resolves(mockFetchResponse);
+        window.fetch = global.fetch; // Make JSDOM window.fetch use the same global stub
 
         try {
             scriptPaths.forEach(p => window.eval(scriptContents[p]));
