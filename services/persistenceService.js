@@ -1,8 +1,15 @@
 // services/persistenceService.js
 "use strict";
 
+/**
+ * Saves the current state of items, packs, and categories to localStorage.
+ * @param {Array<Object>} items - Array of item objects.
+ * @param {Array<Object>} packs - Array of pack objects.
+ * @param {Array<Object>} categories - Array of category objects.
+ */
 export function saveData(items, packs, categories) {
     if (typeof localStorage === 'undefined') {
+        console.warn("localStorage is not available. Data will not be saved.");
         return;
     }
     localStorage.setItem('backpackItems', JSON.stringify(items || []));
@@ -10,6 +17,13 @@ export function saveData(items, packs, categories) {
     localStorage.setItem('backpackCategories', JSON.stringify(categories || []));
 }
 
+/**
+ * Loads items, packs, and categories from localStorage.
+ * If no data is found in localStorage, it loads default example data.
+ * Also performs a data migration for items to ensure they use `packIds` array instead of old `packId` string.
+ * @returns {{items: Array<Object>, packs: Array<Object>, categories: Array<Object>, exampleDataUsed: boolean}}
+ *          An object containing the loaded (or default) items, packs, categories, and a flag indicating if example data was used.
+ */
 export function loadData() {
     let loadedItems = [];
     let loadedPacks = [];

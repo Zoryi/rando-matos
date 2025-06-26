@@ -1,12 +1,27 @@
 // ui/aiFeaturesUI.js
 "use strict";
+import * as domIds from './constants/domIds.js';
+import * as cssClasses from './constants/cssClasses.js';
 
 // Assuming apiService, itemService, categoryService, uiUtils will be imported if they become ES modules.
 // For now, they are passed to constructor.
 // Global functions like updateCategoryDropdowns and renderAll will need to be handled,
 // possibly by importing them or making them part of a larger App class.
 
+/**
+ * Handles UI interactions for AI-powered features like suggesting item details
+ * and generating pack lists.
+ */
 export default class AiFeaturesUI {
+    /**
+     * Initializes AiFeaturesUI, sets up services, UI element references, and event listeners.
+     * @param {Object} apiService - Instance of the ApiService.
+     * @param {Object} itemService - Instance of the ItemService.
+     * @param {Object} categoryService - Instance of the CategoryService.
+     * @param {Object} uiUtils - Instance of UiUtils.
+     * @param {function} globalUpdateCatDropdowns - Reference to the global updateCategoryDropdowns function.
+     * @param {function} globalRenderAll - Reference to the global renderAll function.
+     */
     constructor(apiService, itemService, categoryService, uiUtils, globalUpdateCatDropdowns, globalRenderAll) {
         this.apiService = apiService;
         this.itemService = itemService;
@@ -17,34 +32,34 @@ export default class AiFeaturesUI {
 
 
         // --- Suggest New Item Elements ---
-        this.suggestNewItemDetailsButton = document.getElementById('suggest-new-item-details-button');
-        this.newItemNameInput = document.getElementById('item-name');
-        this.newItemBrandInput = document.getElementById('item-brand');
-        this.newItemCategorySelect = document.getElementById('item-category');
-        this.newItemWeightInput = document.getElementById('item-weight');
-        this.newItemImageUrlInput = document.getElementById('item-image-url');
-        this.newItemImagePreview = document.getElementById('new-item-image-preview');
-        this.newItemLoadingIndicator = document.getElementById('new-item-loading-indicator');
+        this.suggestNewItemDetailsButton = document.getElementById(domIds.SUGGEST_NEW_ITEM_DETAILS_BUTTON);
+        this.newItemNameInput = document.getElementById(domIds.ITEM_NAME);
+        this.newItemBrandInput = document.getElementById(domIds.ITEM_BRAND);
+        this.newItemCategorySelect = document.getElementById(domIds.ITEM_CATEGORY);
+        this.newItemWeightInput = document.getElementById(domIds.ITEM_WEIGHT);
+        this.newItemImageUrlInput = document.getElementById(domIds.ITEM_IMAGE_URL);
+        this.newItemImagePreview = document.getElementById(domIds.NEW_ITEM_IMAGE_PREVIEW);
+        this.newItemLoadingIndicator = document.getElementById(domIds.NEW_ITEM_LOADING_INDICATOR);
 
         // --- Suggest Edit Item Elements ---
-        this.suggestEditItemDetailsButton = document.getElementById('suggest-edit-item-details-button');
-        this.editItemNameInput = document.getElementById('edit-item-name');
-        this.editItemBrandInput = document.getElementById('edit-item-brand');
-        this.editItemCategorySelect = document.getElementById('edit-item-category');
-        this.editItemWeightInput = document.getElementById('edit-item-weight');
-        this.editItemImageUrlInput = document.getElementById('edit-item-image-url');
-        this.editItemImagePreview = document.getElementById('edit-item-image-preview');
-        this.editItemLoadingIndicator = document.getElementById('edit-item-loading-indicator');
+        this.suggestEditItemDetailsButton = document.getElementById(domIds.SUGGEST_EDIT_ITEM_DETAILS_BUTTON);
+        this.editItemNameInput = document.getElementById(domIds.EDIT_ITEM_NAME);
+        this.editItemBrandInput = document.getElementById(domIds.EDIT_ITEM_BRAND);
+        this.editItemCategorySelect = document.getElementById(domIds.EDIT_ITEM_CATEGORY);
+        this.editItemWeightInput = document.getElementById(domIds.EDIT_ITEM_WEIGHT);
+        this.editItemImageUrlInput = document.getElementById(domIds.EDIT_ITEM_IMAGE_URL);
+        this.editItemImagePreview = document.getElementById(domIds.EDIT_ITEM_IMAGE_PREVIEW);
+        this.editItemLoadingIndicator = document.getElementById(domIds.EDIT_ITEM_LOADING_INDICATOR);
 
         // --- Generate Pack List Elements ---
-        this.genPackDestinationInput = document.getElementById('gen-pack-destination');
-        this.genPackDurationInput = document.getElementById('gen-pack-duration');
-        this.genPackActivityInput = document.getElementById('gen-pack-activity');
-        this.generatePackListButton = document.getElementById('generate-pack-list-button');
-        this.generatePackLoadingIndicator = document.getElementById('generate-pack-loading-indicator');
-        this.generatedPackResultsDiv = document.getElementById('generated-pack-results');
-        this.generatedItemsListElement = document.getElementById('generated-items-list');
-        this.addSelectedGeneratedItemsButton = document.getElementById('add-selected-generated-items-button');
+        this.genPackDestinationInput = document.getElementById(domIds.GEN_PACK_DESTINATION);
+        this.genPackDurationInput = document.getElementById(domIds.GEN_PACK_DURATION);
+        this.genPackActivityInput = document.getElementById(domIds.GEN_PACK_ACTIVITY);
+        this.generatePackListButton = document.getElementById(domIds.GENERATE_PACK_LIST_BUTTON);
+        this.generatePackLoadingIndicator = document.getElementById(domIds.GENERATE_PACK_LOADING_INDICATOR);
+        this.generatedPackResultsDiv = document.getElementById(domIds.GENERATED_PACK_RESULTS);
+        this.generatedItemsListElement = document.getElementById(domIds.GENERATED_ITEMS_LIST);
+        this.addSelectedGeneratedItemsButton = document.getElementById(domIds.ADD_SELECTED_GENERATED_ITEMS_BUTTON);
 
         this._setupEventListeners();
     }
@@ -64,6 +79,11 @@ export default class AiFeaturesUI {
         }
     }
 
+    /**
+     * Handles the click event for suggesting details for a new item.
+     * Retrieves item name and brand from input fields and calls the apiService.
+     * @private
+     */
     handleSuggestNewItemDetails() {
         const itemName = this.newItemNameInput.value.trim();
         const itemBrand = this.newItemBrandInput.value.trim();
@@ -83,6 +103,11 @@ export default class AiFeaturesUI {
         this.apiService.suggestItemDetails(itemName, itemBrand, domElements, callbacks);
     }
 
+    /**
+     * Handles the click event for suggesting details for an item being edited.
+     * Retrieves item name and brand from input fields and calls the apiService.
+     * @private
+     */
     handleSuggestEditItemDetails() {
         const itemName = this.editItemNameInput.value.trim();
         const itemBrand = this.editItemBrandInput.value.trim();
@@ -102,6 +127,12 @@ export default class AiFeaturesUI {
         this.apiService.suggestItemDetails(itemName, itemBrand, domElements, callbacks);
     }
 
+    /**
+     * Constructs the callbacks object required by the apiService's suggestItemDetails method.
+     * This centralizes how AiFeaturesUI interacts with other services and global UI update functions.
+     * @private
+     * @returns {Object} Callbacks for the apiService.
+     */
     _getApiServiceCallbacks() {
         return {
             getCategoryNames: () => this.categoryService ? this.categoryService.getCategories().map(cat => cat.name) : [],
@@ -113,6 +144,11 @@ export default class AiFeaturesUI {
         };
     }
 
+    /**
+     * Handles the click event for generating a pack list.
+     * Retrieves trip parameters from input fields and calls the apiService.
+     * @private
+     */
     handleGeneratePackList() {
         const destination = this.genPackDestinationInput.value.trim();
         const durationText = this.genPackDurationInput.value.trim();
@@ -148,9 +184,15 @@ export default class AiFeaturesUI {
         this.apiService.generatePackList(destination, duration, activity, domElements, callbacks);
     }
 
+    /**
+     * Handles adding selected AI-generated items to the user's inventory.
+     * Reads checked items from the suggestions list, adds them via itemService,
+     * and updates relevant UI parts.
+     * @private
+     */
     handleAddSelectedGeneratedItems() {
         if (!this.generatedItemsListElement || !this.itemService || !this.categoryService) return;
-        const checkboxes = this.generatedItemsListElement.querySelectorAll('.add-generated-item-checkbox:checked');
+        const checkboxes = this.generatedItemsListElement.querySelectorAll(`.${cssClasses.ADD_GENERATED_ITEM_CHECKBOX}:checked`);
         let itemsAddedCount = 0;
         const itemsToAdd = [];
 

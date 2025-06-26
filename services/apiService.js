@@ -1,5 +1,6 @@
 // services/apiService.js
 "use strict";
+import * as cssClasses from '../ui/constants/cssClasses.js';
 
 // Make sure to use `globalThis` for browser/Node compatibility if needed,
 // or simply `window.alert` if this is strictly browser-only.
@@ -12,7 +13,13 @@ const showAlert = (message) => {
     }
 };
 
-
+/**
+ * Calls the Gemini API to generate content based on a prompt.
+ * Can optionally use a schema for structured JSON output.
+ * @param {string} prompt - The prompt to send to the API.
+ * @param {Object|null} schema - Optional schema for JSON response formatting.
+ * @returns {Promise<Object|string|null>} The API response (parsed JSON if schema provided, else text), or null on error.
+ */
 export async function callGeminiAPI(prompt, schema = null) {
     let chatHistory = [];
     chatHistory.push({ role: "user", parts: [{ text: prompt }] });
@@ -64,6 +71,11 @@ export async function callGeminiAPI(prompt, schema = null) {
     }
 }
 
+/**
+ * Calls the Imagen API to generate an image based on a prompt.
+ * @param {string} prompt - The prompt to send to the API for image generation.
+ * @returns {Promise<string|null>} A base64 encoded data URL of the image, or null on error.
+ */
 export async function callImagenAPI(prompt) {
     const imagePayload = { instances: [{ prompt: prompt }], parameters: { "sampleCount": 1} };
     const apiKey = ""; // Canvas will provide this in runtime.
@@ -94,6 +106,15 @@ export async function callImagenAPI(prompt) {
     }
 }
 
+/**
+ * Suggests details (category, weight, image) for a new or edited item using AI.
+ * Updates DOM elements directly and uses callbacks for other actions.
+ * @param {string} itemName - The name of the item.
+ * @param {string} itemBrand - The brand of the item.
+ * @param {Object} domElements - Object containing references to DOM elements to update (e.g., inputs, image preview).
+ * @param {Object} callbacks - Object containing callback functions (e.g., getCategoryNames, addCategory, showAlert, updateImagePreview, renderAll).
+ * @returns {Promise<void>}
+ */
 export async function suggestItemDetails(itemName, itemBrand, domElements, callbacks) {
     if (!itemName) {
         if (callbacks.showAlert) callbacks.showAlert("Veuillez entrer le nom de l'item pour obtenir des suggestions.");
@@ -104,7 +125,7 @@ export async function suggestItemDetails(itemName, itemBrand, domElements, callb
         nameInput, brandInput, categorySelect, weightInput, imageUrlInput, imagePreview, loadingIndicator
     } = domElements;
 
-    if (loadingIndicator) loadingIndicator.classList.remove('hidden');
+        if (loadingIndicator) loadingIndicator.classList.remove(cssClasses.HIDDEN);
     if (nameInput) nameInput.disabled = true;
     if (brandInput) brandInput.disabled = true;
     if (categorySelect) categorySelect.disabled = true;
@@ -165,7 +186,7 @@ export async function suggestItemDetails(itemName, itemBrand, domElements, callb
         if (imageUrlInput) imageUrlInput.value = errorPlaceholderUrl;
         if (callbacks.updateImagePreview && imagePreview) callbacks.updateImagePreview(errorPlaceholderUrl, imagePreview);
     } finally {
-        if (loadingIndicator) loadingIndicator.classList.add('hidden');
+            if (loadingIndicator) loadingIndicator.classList.add(cssClasses.HIDDEN);
         if (nameInput) nameInput.disabled = false;
         if (brandInput) brandInput.disabled = false;
         if (categorySelect) categorySelect.disabled = false;
@@ -175,23 +196,33 @@ export async function suggestItemDetails(itemName, itemBrand, domElements, callb
     }
 }
 
+/**
+ * Generates a suggested pack list using AI based on trip parameters.
+ * Updates DOM elements to display suggestions and handles loading states.
+ * @param {string} destination - The destination of the trip.
+ * @param {number} duration - The duration of the trip in days.
+ * @param {string} activity - The primary activity of the trip.
+ * @param {Object} domElements - Object containing references to DOM elements (loading indicator, list button, results area).
+ * @param {Object} callbacks - Object containing callback functions (e.g., getItems, getCategoryNames, showAlert).
+ * @returns {Promise<void>}
+ */
 export async function generatePackList(destination, duration, activity, domElements, callbacks) {
     const {
         loadingIndicator, listButton, resultsDiv, itemsListElement
     } = domElements;
 
     if (!destination || !duration || !activity) {
-        if(resultsDiv) resultsDiv.classList.remove('hidden');
+        if(resultsDiv) resultsDiv.classList.remove(cssClasses.HIDDEN);
         if(itemsListElement) itemsListElement.innerHTML = '<li class="text-center text-gray-500">Veuillez remplir la destination, la durée et l\'activité pour générer une liste.</li>';
         return;
     }
     if (typeof duration !== 'number' || duration <= 0) {
-        if(resultsDiv) resultsDiv.classList.remove('hidden');
+        if(resultsDiv) resultsDiv.classList.remove(cssClasses.HIDDEN);
         if(itemsListElement) itemsListElement.innerHTML = '<li class="text-center text-gray-500">La durée doit être un nombre positif.</li>';
         return;
     }
 
-    if(loadingIndicator) loadingIndicator.classList.remove('hidden');
+    if(loadingIndicator) loadingIndicator.classList.remove(cssClasses.HIDDEN);
     if(listButton) listButton.disabled = true;
 
     let existingInventory = [];
@@ -211,26 +242,26 @@ export async function generatePackList(destination, duration, activity, domEleme
         const response = await callGeminiAPI(prompt, schema);
         if(itemsListElement) itemsListElement.innerHTML = '';
         if (response && Array.isArray(response) && response.length > 0) {
-            if(resultsDiv) resultsDiv.classList.remove('hidden');
+            if(resultsDiv) resultsDiv.classList.remove(cssClasses.HIDDEN);
             response.forEach(item => {
                 const listItem = document.createElement('li');
-                listItem.classList.add('item-suggestion', item.is_existing_inventory ? 'existing-item' : 'new-item');
-                let checkboxHtml = !item.is_existing_inventory ? `<input type="checkbox" class="add-generated-item-checkbox" data-name="${item.name}" data-weight="${item.estimated_weight_grams}" data-category="${item.category}">` : `<span class="text-xs text-blue-700 font-semibold ml-2">(Déjà dans l'inventaire)</span>`;
-                listItem.innerHTML = `<div><span class="item-name">${item.name}</span> <span class="item-details">(${item.estimated_weight_grams} g) | Catégorie: ${item.category}</span></div> ${checkboxHtml}`;
+                listItem.classList.add(cssClasses.ITEM_SUGGESTION, item.is_existing_inventory ? cssClasses.EXISTING_ITEM : cssClasses.NEW_ITEM_SUGGESTION);
+                let checkboxHtml = !item.is_existing_inventory ? `<input type="checkbox" class="${cssClasses.ADD_GENERATED_ITEM_CHECKBOX}" data-name="${item.name}" data-weight="${item.estimated_weight_grams}" data-category="${item.category}">` : `<span class="text-xs text-blue-700 font-semibold ml-2">(Déjà dans l'inventaire)</span>`;
+                listItem.innerHTML = `<div><span class="${cssClasses.ITEM_NAME}">${item.name}</span> <span class="item-details">(${item.estimated_weight_grams} g) | Catégorie: ${item.category}</span></div> ${checkboxHtml}`;
                 if(itemsListElement) itemsListElement.appendChild(listItem);
             });
         } else {
-            if(resultsDiv) resultsDiv.classList.remove('hidden');
+            if(resultsDiv) resultsDiv.classList.remove(cssClasses.HIDDEN);
             if(itemsListElement) itemsListElement.innerHTML = '<li class="text-center text-gray-500">Aucune suggestion d\'item générée. Veuillez essayer une autre combinaison.</li>';
             if(callbacks.showAlert && response === null) callbacks.showAlert("La génération de la liste a échoué ou n'a retourné aucune suggestion.");
         }
     } catch (error) {
         console.error("Erreur lors de la génération de la liste de colisage:", error);
-        if(resultsDiv) resultsDiv.classList.remove('hidden');
+        if(resultsDiv) resultsDiv.classList.remove(cssClasses.HIDDEN);
         if(itemsListElement) itemsListElement.innerHTML = `<li class="text-center text-red-500">Erreur: ${error.message}</li>`;
         if(callbacks.showAlert) callbacks.showAlert(`Erreur lors de la génération de la liste: ${error.message}`);
     } finally {
-        if(loadingIndicator) loadingIndicator.classList.add('hidden');
+        if(loadingIndicator) loadingIndicator.classList.add(cssClasses.HIDDEN);
         if(listButton) listButton.disabled = false;
     }
 }

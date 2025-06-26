@@ -12,41 +12,67 @@ let categories = []; // Internal state
 
 // Placeholder for services that might not be immediately available as modules
 // These would ideally be injected or properly imported once fully refactored.
-let itemServiceRef = globalThis.itemService;
-let packServiceRef = globalThis.packService;
+let itemServiceRef = null; // Initialize to null, will be set by app.js
+let packServiceRef = null; // Initialize to null, will be set by app.js
 
+/**
+ * Sets the item service dependency.
+ * @param {Object} service - The item service instance.
+ */
 export function setItemService(service) {
     itemServiceRef = service;
 }
 
+/**
+ * Sets the pack service dependency.
+ * @param {Object} service - The pack service instance.
+ */
 export function setPackService(service) {
     packServiceRef = service;
 }
 
+/**
+ * Initializes or replaces the current list of categories.
+ * @param {Array<Object|Category>} newCategories - An array of category data objects or Category instances.
+ */
 export function setCategories(newCategories) {
     categories = newCategories ? newCategories.map(catData => catData instanceof Category ? catData : new Category(catData)) : [];
 }
 
+/**
+ * Retrieves a copy of all current categories.
+ * @returns {Array<Category>} An array of Category instances.
+ */
 export function getCategories() {
     return categories.map(cat => new Category(cat)); // Return new instances
 }
 
+/**
+ * Finds a category by its name (case-insensitive).
+ * @param {string} categoryName - The name of the category to find.
+ * @returns {Category|undefined} The Category instance if found, otherwise undefined.
+ */
 export function getCategoryByName(categoryName) {
     const category = categories.find(cat => cat.name.toLowerCase() === categoryName.toLowerCase());
     return category ? new Category(category) : undefined; // Return a new instance
 }
 
+/**
+ * Adds a new category to the list.
+ * Validates the category name for non-emptiness and uniqueness (case-insensitive).
+ * Persists the changes.
+ * @param {string} categoryName - The name for the new category.
+ * @returns {Category|null} The new Category instance if successful, or null if validation fails.
+ */
 export function addCategory(categoryName) {
-    if (!categoryName || typeof categoryName !== 'string' || categoryName.trim() === '') {
-        if (typeof alert === 'function') alert('Veuillez entrer le nom de la catégorie.');
-        else console.error("CategoryService: Invalid category name.");
-        return null;
+    const trimmedName = categoryName ? categoryName.trim() : '';
+    if (!trimmedName) {
+        // console.error("CategoryService: Category name cannot be empty.");
+        return { success: false, message: 'Le nom de la catégorie ne peut pas être vide.', category: null };
     }
-    const trimmedName = categoryName.trim();
     if (categories.some(cat => cat.name.toLowerCase() === trimmedName.toLowerCase())) {
-        if (typeof alert === 'function') alert(`La catégorie "${trimmedName}" existe déjà.`);
-        else console.error(`CategoryService: Category "${trimmedName}" already exists.`);
-        return null;
+        // console.error(`CategoryService: Category "${trimmedName}" already exists.`);
+        return { success: false, message: `La catégorie "${trimmedName}" existe déjà.`, category: null };
     }
     const newCategory = new Category({ name: trimmedName });
     categories.push(newCategory);
@@ -56,9 +82,18 @@ export function addCategory(categoryName) {
     const currentItems = (itemServiceRef) ? itemServiceRef.getItems().map(i => ({...i})) : [];
     const currentPacks = (packServiceRef) ? packServiceRef.getPacks().map(p => ({...p})) : [];
     persistenceService.saveData(currentItems, currentPacks, plainCategories);
-    return new Category(newCategory); // Return a new instance
+    return { success: true, message: 'Catégorie ajoutée avec succès.', category: new Category(newCategory) };
 }
 
+/**
+ * Deletes a category by its name.
+ * If items are associated with this category, their category field will be cleared.
+ * Uses a confirmation function before proceeding with deletion.
+ * Persists the changes.
+ * @param {string} categoryName - The name of the category to delete.
+ * @param {function(string):boolean} confirmFunc - A function that takes a confirmation message and returns true if confirmed, false otherwise.
+ * @returns {boolean} True if the category was deleted, false otherwise (e.g., not found, or confirmation denied).
+ */
 export function deleteCategory(categoryName, confirmFunc) {
     if (!itemServiceRef) {
         console.error("CategoryService: itemService is not available.");

@@ -8,6 +8,8 @@ import * as uiUtils from './ui/utils/imageUtils.js';
 import ModalHandler from './ui/modalHandler.js';
 import ItemDisplay from './ui/itemDisplay.js';
 import PackDisplay from './ui/packDisplay.js';
+import * as domIds from './ui/constants/domIds.js';
+// import * as cssClasses from './ui/constants/cssClasses.js'; // If needed in app.js
 import CategoryDisplay from './ui/categoryDisplay.js';
 import FormHandler from './ui/formHandler.js';
 import AiFeaturesUI from './ui/aiFeaturesUI.js';
@@ -22,10 +24,13 @@ let modalHandler, itemDisplay, packDisplay, categoryDisplay, navigationHandler;
 // Let's keep a global currentView for updateViewFilterOptions for now.
 let currentView = 'all';
 
-
+/**
+ * Updates all category select dropdowns in forms (new item, edit item)
+ * with the current list of categories from the categoryService.
+ */
 function updateCategoryDropdowns() {
-    const newItemCatSelect = document.getElementById('item-category');
-    const editItemCatSelect = document.getElementById('edit-item-category');
+    const newItemCatSelect = document.getElementById(domIds.ITEM_CATEGORY);
+    const editItemCatSelect = document.getElementById(domIds.EDIT_ITEM_CATEGORY);
 
     if (!newItemCatSelect || !editItemCatSelect || !categoryService) return;
     const categorySelects = [newItemCatSelect, editItemCatSelect];
@@ -48,8 +53,13 @@ function updateCategoryDropdowns() {
     });
 }
 
+/**
+ * Updates the view filter dropdown (in the inventory section)
+ * with the current list of packs from packService.
+ * It attempts to maintain the currently selected filter if possible.
+ */
 function updateViewFilterOptions() {
-    const viewFilter = document.getElementById('view-filter');
+    const viewFilter = document.getElementById(domIds.VIEW_FILTER);
     if (!viewFilter || !packService) return;
 
     // Store current selected value to try and restore it
@@ -77,6 +87,12 @@ function updateViewFilterOptions() {
     }
 }
 
+/**
+ * Triggers a full re-render of all major display components (packs, items, categories)
+ * and updates category dropdowns.
+ * This function is typically called after any action that might change the data
+ * displayed in multiple parts of the UI.
+ */
 function renderAll() {
     if (packDisplay && typeof packDisplay.renderPacks === 'function') {
         packDisplay.renderPacks();
@@ -95,13 +111,13 @@ function renderAll() {
 // which call itemService methods, and then renderAll updates the UI.
 
 document.addEventListener('DOMContentLoaded', () => {
-    const sidebarLinks = document.querySelectorAll('.sidebar nav ul li a');
-    const contentSections = document.querySelectorAll('.main-content .content-section');
+    const sidebarLinks = document.querySelectorAll(domIds.SIDEBAR_LINKS);
+    const contentSections = document.querySelectorAll(domIds.CONTENT_SECTIONS);
 
-    const newItemImageUrlInput = document.getElementById('item-image-url');
-    const newItemImagePreview = document.getElementById('new-item-image-preview');
-    const editItemImageUrlInput = document.getElementById('edit-item-image-url');
-    const editItemImagePreview = document.getElementById('edit-item-image-preview');
+    const newItemImageUrlInput = document.getElementById(domIds.ITEM_IMAGE_URL);
+    const newItemImagePreview = document.getElementById(domIds.NEW_ITEM_IMAGE_PREVIEW);
+    const editItemImageUrlInput = document.getElementById(domIds.EDIT_ITEM_IMAGE_URL);
+    const editItemImagePreview = document.getElementById(domIds.EDIT_ITEM_IMAGE_PREVIEW);
 
     if (newItemImageUrlInput && newItemImagePreview) {
         newItemImageUrlInput.addEventListener('input', () => {
@@ -114,6 +130,14 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    /**
+     * Initializes the application.
+     * Sets up services, loads initial data, instantiates UI components,
+     * sets up inter-service and inter-component dependencies,
+     * and performs the initial render.
+     * This function is called once the DOM is fully loaded.
+     * @async
+     */
     async function initApp() {
         console.log('initApp started (ESM).');
 

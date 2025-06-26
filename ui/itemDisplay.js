@@ -1,9 +1,22 @@
 // ui/itemDisplay.js
 "use strict";
+import * as domIds from './constants/domIds.js';
+import * as cssClasses from './constants/cssClasses.js';
 
 // Assumes modalHandler and renderAll function will be passed via constructor or DI.
 
+/**
+ * Handles the display of items in the inventory section, including different views
+ * (all items, by category, by pack) and interactions like editing or deleting items.
+ */
 export default class ItemDisplay {
+    /**
+     * Initializes ItemDisplay, sets up services, UI element references, and event listeners.
+     * @param {Object} itemService - Instance of ItemService.
+     * @param {Object} categoryService - Instance of CategoryService.
+     * @param {Object} modalHandlerRef - Reference to the ModalHandler instance.
+     * @param {function} globalRenderAllRef - Reference to a global renderAll function for UI refresh.
+     */
     constructor(itemService, categoryService, modalHandlerRef, globalRenderAllRef) {
         this.itemService = itemService;
         this.categoryService = categoryService; // May not be strictly needed if categories are derived from items
@@ -11,10 +24,10 @@ export default class ItemDisplay {
         this.globalRenderAll = globalRenderAllRef; // Reference to global renderAll function
 
         // DOM elements this component will manage or update
-        this.itemListElement = document.getElementById('item-list');
-        this.totalWeightElement = document.getElementById('total-weight');
-        this.inventoryWeightElement = document.getElementById('inventory-weight'); // In sidebar
-        this.viewFilterSelect = document.getElementById('view-filter');
+        this.itemListElement = document.getElementById(domIds.ITEM_LIST);
+        this.totalWeightElement = document.getElementById(domIds.TOTAL_WEIGHT);
+        this.inventoryWeightElement = document.getElementById(domIds.INVENTORY_WEIGHT); // In sidebar
+        this.viewFilterSelect = document.getElementById(domIds.VIEW_FILTER);
 
         // This will be set by app.js or a navigation handler
         this.currentView = 'all';
@@ -23,6 +36,11 @@ export default class ItemDisplay {
         this._setupEventListeners();
     }
 
+    /**
+     * Sets up event listeners for the item list and view filter.
+     * Handles view changes, item edit, and item delete actions.
+     * @private
+     */
     _setupEventListeners() {
         if (this.viewFilterSelect) {
             this.viewFilterSelect.addEventListener('change', (event) => {
@@ -36,13 +54,13 @@ export default class ItemDisplay {
                 const target = event.target;
                 const itemId = target.dataset.itemId;
 
-                if (target.classList.contains('edit-button') && itemId) {
+                if (target.classList.contains(cssClasses.EDIT_BUTTON) && itemId) {
                     if (this.modalHandlerRef && typeof this.modalHandlerRef.openEditModal === 'function') {
                         this.modalHandlerRef.openEditModal(itemId);
                     } else {
                         console.error("ModalHandler not available to open edit modal.");
                     }
-                } else if (target.classList.contains('delete-button') && itemId) {
+                } else if (target.classList.contains(cssClasses.DELETE_BUTTON) && itemId) {
                     if (this.itemService && typeof this.itemService.deleteItem === 'function') {
                         if (this.itemService.deleteItem(itemId, window.confirm)) {
                             this.renderListByView();
@@ -56,6 +74,46 @@ export default class ItemDisplay {
         }
     }
 
+    /**
+     * Generates the HTML string for a single item.
+     * Used by various render methods (all items, by category, by pack).
+     * @param {Item} item - The item object to render.
+     * @param {number} contextualTotalWeight - The total weight used for calculating the item's weight bar percentage (e.g., overall total, category total, pack total).
+     * @returns {string} HTML string for the item.
+     * @private
+     */
+    _renderSingleItemHTML(item, contextualTotalWeight) {
+        const itemWeight = item.weight || 0;
+        // Weight percentage can be based on overall inventory or a specific context (category/pack)
+        const weightPercentage = contextualTotalWeight > 0 ? (itemWeight / contextualTotalWeight) * 100 : 0;
+
+        return `
+            <div class="${cssClasses.WEIGHT_BAR}" style="width: ${weightPercentage}%;"></div>
+            <div class="${cssClasses.ITEM_DETAILS}">
+                <img src="${item.imageUrl || 'https://placehold.co/50x50/eeeeee/aaaaaa?text=No+Img'}"
+                     onerror="this.onerror=null;this.src='https://placehold.co/50x50/eeeeee/aaaaaa?text=No+Img';"
+                     alt="Image de ${item.name}"
+                     class="w-12 h-12 rounded-full object-cover mr-4 border border-gray-300">
+                <span class="${cssClasses.ITEM_NAME}">${item.name}</span>
+                <span class="${cssClasses.ITEM_WEIGHT}">(${item.weight} g)</span>
+                ${item.brand ? `<span class="${cssClasses.ITEM_BRAND}">| ${item.brand}</span>` : ''}
+                ${item.category ? `<span class="${cssClasses.ITEM_CATEGORY_DISPLAY}">| ${item.category}</span>` : ''}
+                ${item.tags && item.tags.length > 0 ? `<span class="${cssClasses.ITEM_TAGS_DISPLAY}">| Tags: ${item.tags.join(', ')}</span>` : ''}
+                ${item.capacity ? `<span class="${cssClasses.ITEM_CAPACITY_DISPLAY}">| Capacité: ${item.capacity}</span>` : ''}
+                ${item.isConsumable ? `<span class="${cssClasses.ITEM_CONSUMABLE_DISPLAY}">| Consommable</span>` : ''}
+            </div>
+            <div class="${cssClasses.ITEM_ACTIONS}">
+                <button class="${cssClasses.EDIT_BUTTON}" data-item-id="${item.id}">Modifier</button>
+                <button class="${cssClasses.DELETE_BUTTON}" data-item-id="${item.id}">Supprimer</button>
+            </div>`;
+    }
+
+    /**
+     * Renders a flat list of items.
+     * If no items are provided, it fetches all items from the itemService.
+     * Updates the total weight display.
+     * @param {Array<Item>|null} [itemsToRender=null] - Optional array of items to render. If null, all items are fetched.
+     */
     renderItems(itemsToRender = null) {
         if (!this.itemListElement || !this.totalWeightElement || !this.inventoryWeightElement || !this.itemService) return;
 
@@ -71,39 +129,21 @@ export default class ItemDisplay {
         } else {
             items.forEach(item => {
                 const listItem = document.createElement('li');
-                listItem.classList.add('item');
-                if (item.packed) listItem.classList.add('packed');
-
-                const itemWeight = item.weight || 0;
-                const weightPercentage = overallInventoryTotalWeight > 0 ? (itemWeight / overallInventoryTotalWeight) * 100 : 0;
-
-                listItem.innerHTML = `
-                    <div class="weight-bar" style="width: ${weightPercentage}%;"></div>
-                    <div class="item-details">
-                        <img src="${item.imageUrl || 'https://placehold.co/50x50/eeeeee/aaaaaa?text=No+Img'}"
-                             onerror="this.onerror=null;this.src='https://placehold.co/50x50/eeeeee/aaaaaa?text=No+Img';"
-                             alt="Image de ${item.name}"
-                             class="w-12 h-12 rounded-full object-cover mr-4 border border-gray-300">
-                        <span class="item-name">${item.name}</span>
-                        <span class="item-weight">(${item.weight} g)</span>
-                        ${item.brand ? `<span class="item-brand">| ${item.brand}</span>` : ''}
-                        ${item.category ? `<span class="item-category">| ${item.category}</span>` : ''}
-                        ${item.tags && item.tags.length > 0 ? `<span class="item-tags">| Tags: ${item.tags.join(', ')}</span>` : ''}
-                        ${item.capacity ? `<span class="item-capacity">| Capacité: ${item.capacity}</span>` : ''}
-                        ${item.isConsumable ? `<span class="item-consumable">| Consommable</span>` : ''}
-                    </div>
-                    <div class="item-actions">
-                        <button class="edit-button" data-item-id="${item.id}">Modifier</button>
-                        <button class="delete-button" data-item-id="${item.id}">Supprimer</button>
-                    </div>`;
+                listItem.classList.add(cssClasses.ITEM);
+                if (item.packed) listItem.classList.add(cssClasses.PACKED);
+                listItem.innerHTML = this._renderSingleItemHTML(item, overallInventoryTotalWeight);
                 this.itemListElement.appendChild(listItem);
-                // currentListTotalWeight += itemWeight; // This variable was unused.
             });
         }
         this.totalWeightElement.textContent = `Poids Total Inventaire : ${overallInventoryTotalWeight} g`;
         this.inventoryWeightElement.textContent = `(${overallInventoryTotalWeight} g)`;
     }
 
+    /**
+     * Renders items grouped by their categories.
+     * Calculates and displays weight and packing progress for each category.
+     * Updates the total weight display.
+     */
     renderCategories() {
         if (!this.itemListElement || !this.totalWeightElement || !this.inventoryWeightElement || !this.itemService) return;
 
@@ -131,12 +171,12 @@ export default class ItemDisplay {
             const categoryProgress = categoryWeight > 0 ? (packedWeightInCategory / categoryWeight) * 100 : 0;
 
             const categoryHeader = document.createElement('li');
-            categoryHeader.classList.add('category-item', 'font-bold', 'mt-4');
+            categoryHeader.classList.add('category-item', 'font-bold', 'mt-4'); // 'category-item' could be a constant
             if (categoryWeight > 0 && packedWeightInCategory === categoryWeight) {
-                categoryHeader.classList.add('packed');
+                categoryHeader.classList.add(cssClasses.PACKED);
             }
             categoryHeader.innerHTML = `
-                <div class="weight-bar" style="width: ${categoryProgress}%;"></div>
+                <div class="${cssClasses.WEIGHT_BAR}" style="width: ${categoryProgress}%;"></div>
                 <div class="category-details">
                     <span class="category-name">${categoryName}</span>
                     <span class="category-weight">(${categoryWeight} g)</span>
@@ -147,30 +187,10 @@ export default class ItemDisplay {
 
             itemsInCategory.forEach(item => {
                 const listItem = document.createElement('li');
-                listItem.classList.add('item', 'ml-4');
-                if (item.packed) listItem.classList.add('packed');
-
-                const itemWeight = item.weight || 0;
-                const weightPercentageInCategory = categoryWeight > 0 ? (itemWeight / categoryWeight) * 100 : 0;
-
-                listItem.innerHTML = `
-                    <div class="weight-bar" style="width: ${weightPercentageInCategory}%;"></div>
-                    <div class="item-details">
-                        <img src="${item.imageUrl || 'https://placehold.co/50x50/eeeeee/aaaaaa?text=No+Img'}"
-                             onerror="this.onerror=null;this.src='https://placehold.co/50x50/eeeeee/aaaaaa?text=No+Img';"
-                             alt="Image de ${item.name}"
-                             class="w-12 h-12 rounded-full object-cover mr-4 border border-gray-300">
-                        <span class="item-name">${item.name}</span>
-                        <span class="item-weight">(${item.weight} g)</span>
-                        ${item.brand ? `<span class="item-brand">| ${item.brand}</span>` : ''}
-                        ${item.tags && item.tags.length > 0 ? `<span class="item-tags">| Tags: ${item.tags.join(', ')}</span>` : ''}
-                        ${item.capacity ? `<span class="item-capacity">| Capacité: ${item.capacity}</span>` : ''}
-                        ${item.isConsumable ? `<span class="item-consumable">| Consommable</span>` : ''}
-                    </div>
-                    <div class="item-actions">
-                        <button class="edit-button" data-item-id="${item.id}">Modifier</button>
-                        <button class="delete-button" data-item-id="${item.id}">Supprimer</button>
-                    </div>`;
+                listItem.classList.add(cssClasses.ITEM, 'ml-4');
+                if (item.packed) listItem.classList.add(cssClasses.PACKED);
+                // For items within a category, the contextualTotalWeight for the bar is the categoryWeight
+                listItem.innerHTML = this._renderSingleItemHTML(item, categoryWeight);
                 this.itemListElement.appendChild(listItem);
             });
         });
@@ -178,6 +198,10 @@ export default class ItemDisplay {
         this.inventoryWeightElement.textContent = `(${overallInventoryTotalWeight} g)`;
     }
 
+    /**
+     * Renders the item list based on the current view selected in the filter.
+     * This can be 'all' items, items 'by category', or items within a specific 'pack'.
+     */
     renderListByView() {
         if (!this.viewFilterSelect || !this.itemListElement || !this.itemService) return;
 
@@ -201,31 +225,10 @@ export default class ItemDisplay {
             } else {
                 itemsInPack.forEach(item => {
                     const listItem = document.createElement('li');
-                    listItem.classList.add('item');
-                    if (item.packed) listItem.classList.add('packed');
-
-                    const itemWeight = item.weight || 0;
-                    const weightPercentageInPack = packTotalWeight > 0 ? (itemWeight / packTotalWeight) * 100 : 0;
-
-                    listItem.innerHTML = `
-                        <div class="weight-bar" style="width: ${weightPercentageInPack}%;"></div>
-                        <div class="item-details">
-                             <img src="${item.imageUrl || 'https://placehold.co/50x50/eeeeee/aaaaaa?text=No+Img'}"
-                                  onerror="this.onerror=null;this.src='https://placehold.co/50x50/eeeeee/aaaaaa?text=No+Img';"
-                                  alt="Image de ${item.name}"
-                                  class="w-12 h-12 rounded-full object-cover mr-4 border border-gray-300">
-                             <span class="item-name">${item.name}</span>
-                             <span class="item-weight">(${item.weight} g)</span>
-                             ${item.brand ? `<span class="item-brand">| ${item.brand}</span>` : ''}
-                             ${item.category ? `<span class="item-category">| ${item.category}</span>` : ''}
-                             ${item.tags && item.tags.length > 0 ? `<span class="item-tags">| Tags: ${item.tags.join(', ')}</span>` : ''}
-                             ${item.capacity ? `<span class="item-capacity">| Capacité: ${item.capacity}</span>` : ''}
-                             ${item.isConsumable ? `<span class="item-consumable">| Consommable</span>` : ''}
-                        </div>
-                        <div class="item-actions">
-                             <button class="edit-button" data-item-id="${item.id}">Modifier</button>
-                             <button class="delete-button" data-item-id="${item.id}">Supprimer</button>
-                        </div>`;
+                    listItem.classList.add(cssClasses.ITEM);
+                    if (item.packed) listItem.classList.add(cssClasses.PACKED);
+                    // For items within a pack view, the contextualTotalWeight for the bar is the packTotalWeight
+                    listItem.innerHTML = this._renderSingleItemHTML(item, packTotalWeight);
                     this.itemListElement.appendChild(listItem);
                 });
             }

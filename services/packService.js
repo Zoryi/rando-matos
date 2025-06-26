@@ -8,50 +8,98 @@ import * as persistenceService from './persistenceService.js';
 let packs = []; // Internal state for packs
 
 // Placeholder for services that might not be immediately available as modules
-let itemServiceRef = globalThis.itemService;
-let categoryServiceRef = globalThis.categoryService;
+let itemServiceRef = null; // Initialize to null, will be set by app.js
+let categoryServiceRef = null; // Initialize to null, will be set by app.js
 
+/**
+ * Sets the item service dependency.
+ * @param {Object} service - The item service instance.
+ */
 export function setItemService(service) {
     itemServiceRef = service;
 }
+/**
+ * Sets the category service dependency.
+ * @param {Object} service - The category service instance.
+ */
 export function setCategoryService(service) {
     categoryServiceRef = service;
 }
 
-
+/**
+ * Generates a unique ID for a new pack.
+ * @private
+ * @returns {string} A unique pack ID.
+ */
 function generatePackId() {
     return 'pack-' + Date.now().toString() + Math.random().toString(36).substring(2, 9);
 }
 
+/**
+ * Initializes or replaces the current list of packs.
+ * @param {Array<Object|Pack>} newPacks - An array of pack data objects or Pack instances.
+ */
 export function setPacks(newPacks) {
     packs = newPacks ? newPacks.map(packData => packData instanceof Pack ? packData : new Pack(packData)) : [];
 }
 
+/**
+ * Retrieves a copy of all current packs.
+ * @returns {Array<Pack>} An array of Pack instances.
+ */
 export function getPacks() {
     return packs.map(pack => new Pack(pack)); // Return new instances
 }
 
+/**
+ * Finds a pack by its ID.
+ * @param {string} packId - The ID of the pack to find.
+ * @returns {Pack|undefined} The Pack instance if found, otherwise undefined.
+ */
 export function getPackById(packId) {
     const pack = packs.find(p => p.id === packId);
     return pack ? new Pack(pack) : undefined; // Return a new instance
 }
 
+/**
+ * Adds a new pack to the list.
+ * Validates the pack name for non-emptiness.
+ * Persists the changes.
+ * @param {string} packName - The name for the new pack.
+ * @returns {Pack|null} The new Pack instance if successful, or null if validation fails.
+ */
 export function addPack(packName) {
-    if (!packName || typeof packName !== 'string' || packName.trim() === '') {
-        if (typeof alert === 'function') alert('Veuillez entrer le nom du pack.');
-        else console.error("PackService: Invalid pack name.");
-        return null;
+    const trimmedName = packName ? packName.trim() : '';
+    if (!trimmedName) {
+        // console.error("PackService: Pack name cannot be empty.");
+        return { success: false, message: 'Le nom du pack ne peut pas être vide.', pack: null };
     }
-    const newPack = new Pack({ id: generatePackId(), name: packName.trim() });
+    // Assuming pack names should also be unique, though not explicitly stated before for this service.
+    // Adding a check for duplicate pack names similar to categories.
+    if (packs.some(p => p.name.toLowerCase() === trimmedName.toLowerCase())) {
+        // console.error(`PackService: Pack name "${trimmedName}" already exists.`);
+        return { success: false, message: `Le pack nommé "${trimmedName}" existe déjà.`, pack: null };
+    }
+
+    const newPack = new Pack({ id: generatePackId(), name: trimmedName });
     packs.push(newPack);
 
     const plainPacks = packs.map(pack => ({...pack}));
     const currentItems = (itemServiceRef) ? itemServiceRef.getItems().map(i => ({...i})) : [];
     const currentCategories = (categoryServiceRef) ? categoryServiceRef.getCategories().map(c => ({...c})) : [];
     persistenceService.saveData(currentItems, plainPacks, currentCategories);
-    return new Pack(newPack); // Return a new instance
+    return { success: true, message: "Pack ajouté avec succès.", pack: new Pack(newPack) };
 }
 
+/**
+ * Deletes a pack by its ID.
+ * Also updates items that were part of this pack to remove the packId from their list.
+ * Uses a confirmation function before proceeding.
+ * Persists all changes.
+ * @param {string} packId - The ID of the pack to delete.
+ * @param {function(string):boolean} confirmFunc - A function for user confirmation.
+ * @returns {boolean} True if the pack was deleted, false otherwise.
+ */
 export function deletePack(packId, confirmFunc) {
     if (!itemServiceRef) {
         console.error("packService: itemService is not available.");
@@ -100,6 +148,13 @@ export function deletePack(packId, confirmFunc) {
     return false;
 }
 
+/**
+ * Adds an item to a pack.
+ * Updates the item's packIds and persists the changes.
+ * @param {string} itemId - The ID of the item to add.
+ * @param {string} packId - The ID of the pack to add the item to.
+ * @returns {boolean} True if the item was successfully added to the pack, false otherwise (e.g., item not found, already in pack, or save failed).
+ */
 export function addItemToPack(itemId, packId) {
     if (!itemServiceRef) {
         console.error("packService: itemService is not available.");
@@ -126,6 +181,14 @@ export function addItemToPack(itemId, packId) {
     return false; // Item already in pack
 }
 
+/**
+ * Removes an item from a pack.
+ * Updates the item's packIds and sets its 'packed' status to false.
+ * Persists the changes.
+ * @param {string} itemId - The ID of the item to remove.
+ * @param {string} packId - The ID of the pack to remove the item from.
+ * @returns {boolean} True if the item was successfully removed, false otherwise.
+ */
 export function removeItemFromPack(itemId, packId) {
     if (!itemServiceRef) {
         console.error("packService: itemService is not available.");
@@ -155,6 +218,12 @@ export function removeItemFromPack(itemId, packId) {
     return false;
 }
 
+/**
+ * Sets the 'packed' status of all items within a specific pack to false.
+ * Persists changes for each item.
+ * @param {string} currentManagingPackId - The ID of the pack whose items are to be unpacked.
+ * @returns {boolean} True if any item's status was changed, false otherwise.
+ */
 export function unpackAllInCurrentPack(currentManagingPackId) {
     if (!itemServiceRef || !currentManagingPackId) {
         console.error("packService: itemService is not available or currentManagingPackId is missing.");
