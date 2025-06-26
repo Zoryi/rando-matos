@@ -1,104 +1,142 @@
 // services/categoryService.js
-(function(global) {
-    "use strict";
-    const Category = (global.appModels && global.appModels.Category) ? global.appModels.Category : class DefaultCategory { constructor(data) { Object.assign(this, data); } };
+"use strict";
+import Category from '../models/Category.js';
+import * as persistenceService from './persistenceService.js';
+// Import other services if they are directly used and become ES modules.
+// For now, assuming itemService and packService will be available on global or injected.
+// If they are also refactored, they should be imported.
+// e.g. import * as itemService from './itemService.js';
+// e.g. import * as packService from './packService.js';
 
-    let categories = []; // Internal state
+let categories = []; // Internal state
 
-    const persistence = global.persistenceService || {
-        saveData: () => {}
-    };
+// Placeholder for services that might not be immediately available as modules
+// These would ideally be injected or properly imported once fully refactored.
+let itemServiceRef = null; // Initialize to null, will be set by app.js
+let packServiceRef = null; // Initialize to null, will be set by app.js
 
-    global.categoryService = {
-        setCategories: function(newCategories) {
-            categories = newCategories ? newCategories.map(catData => catData instanceof Category ? catData : new Category(catData)) : [];
-        },
-        getCategories: function() {
-            return categories.map(cat => new Category(cat)); // Return new instances
-        },
-        getCategoryByName: function(categoryName) {
-            const category = categories.find(cat => cat.name.toLowerCase() === categoryName.toLowerCase());
-            return category ? new Category(category) : undefined; // Return a new instance
-        },
+/**
+ * Sets the item service dependency.
+ * @param {Object} service - The item service instance.
+ */
+export function setItemService(service) {
+    itemServiceRef = service;
+}
 
-        addCategory: function(categoryName) {
-            if (!categoryName || typeof categoryName !== 'string' || categoryName.trim() === '') {
-                if (typeof global.alert === 'function') global.alert('Veuillez entrer le nom de la catégorie.');
-                else console.error("CategoryService: Invalid category name.");
-                return null;
-            }
-            const trimmedName = categoryName.trim();
-            if (categories.some(cat => cat.name.toLowerCase() === trimmedName.toLowerCase())) {
-                if (typeof global.alert === 'function') global.alert(`La catégorie "${trimmedName}" existe déjà.`);
-                else console.error(`CategoryService: Category "${trimmedName}" already exists.`);
-                return null;
-            }
-            const newCategory = new Category({ name: trimmedName });
-            categories.push(newCategory);
+/**
+ * Sets the pack service dependency.
+ * @param {Object} service - The pack service instance.
+ */
+export function setPackService(service) {
+    packServiceRef = service;
+}
 
-            const plainCategories = categories.map(cat => ({...cat}));
-            const currentItems = (global.itemService) ? global.itemService.getItems().map(i => ({...i})) : [];
-            const currentPacks = (global.packService) ? global.packService.getPacks().map(p => ({...p})) : [];
-            persistence.saveData(currentItems, currentPacks, plainCategories);
-            return new Category(newCategory); // Return a new instance
-        },
+/**
+ * Initializes or replaces the current list of categories.
+ * @param {Array<Object|Category>} newCategories - An array of category data objects or Category instances.
+ */
+export function setCategories(newCategories) {
+    categories = newCategories ? newCategories.map(catData => catData instanceof Category ? catData : new Category(catData)) : [];
+}
 
-        deleteCategory: function(categoryName, confirmFunc) {
-            if (!global.itemService) {
-                console.error("CategoryService: itemService is not available.");
-                return false;
-            }
-            const categoryIndex = categories.findIndex(cat => cat.name === categoryName);
-            if (categoryIndex === -1) {
-                console.warn("CategoryService: Category not found for deletion:", categoryName);
-                return false;
-            }
+/**
+ * Retrieves a copy of all current categories.
+ * @returns {Array<Category>} An array of Category instances.
+ */
+export function getCategories() {
+    return categories.map(cat => new Category(cat)); // Return new instances
+}
 
-            const allItems = global.itemService.getItems();
-            const itemsInCategory = allItems.filter(item => item.category === categoryName);
-            let doDelete = true;
+/**
+ * Finds a category by its name (case-insensitive).
+ * @param {string} categoryName - The name of the category to find.
+ * @returns {Category|undefined} The Category instance if found, otherwise undefined.
+ */
+export function getCategoryByName(categoryName) {
+    const category = categories.find(cat => cat.name.toLowerCase() === categoryName.toLowerCase());
+    return category ? new Category(category) : undefined; // Return a new instance
+}
 
-            if (confirmFunc && typeof confirmFunc === 'function') {
-                if (itemsInCategory.length > 0) {
-                    doDelete = confirmFunc(`La catégorie "${categoryName}" contient ${itemsInCategory.length} item(s). Voulez-vous vraiment la supprimer ? Les items ne seront pas supprimés de votre inventaire mais leur catégorie sera effacée.`);
-                } else {
-                    doDelete = confirmFunc(`Voulez-vous vraiment supprimer la catégorie "${categoryName}" ?`);
-                }
-            }
+/**
+ * Adds a new category to the list.
+ * Validates the category name for non-emptiness and uniqueness (case-insensitive).
+ * Persists the changes.
+ * @param {string} categoryName - The name for the new category.
+ * @returns {Category|null} The new Category instance if successful, or null if validation fails.
+ */
+export function addCategory(categoryName) {
+    const trimmedName = categoryName ? categoryName.trim() : '';
+    if (!trimmedName) {
+        // console.error("CategoryService: Category name cannot be empty.");
+        return { success: false, message: 'Le nom de la catégorie ne peut pas être vide.', category: null };
+    }
+    if (categories.some(cat => cat.name.toLowerCase() === trimmedName.toLowerCase())) {
+        // console.error(`CategoryService: Category "${trimmedName}" already exists.`);
+        return { success: false, message: `La catégorie "${trimmedName}" existe déjà.`, category: null };
+    }
+    const newCategory = new Category({ name: trimmedName });
+    categories.push(newCategory);
 
-            if (doDelete) {
-                categories.splice(categoryIndex, 1); // Modify internal categories list
+    const plainCategories = categories.map(cat => ({...cat}));
+    // Ensure itemServiceRef and packServiceRef are available before calling getItems/getPacks
+    const currentItems = (itemServiceRef) ? itemServiceRef.getItems().map(i => ({...i})) : [];
+    const currentPacks = (packServiceRef) ? packServiceRef.getPacks().map(p => ({...p})) : [];
+    persistenceService.saveData(currentItems, currentPacks, plainCategories);
+    return { success: true, message: 'Catégorie ajoutée avec succès.', category: new Category(newCategory) };
+}
 
-                // let allItemUpdatesSucceeded = true; // Keep track if all items saved correctly
-                if (itemsInCategory.length > 0) {
-                    itemsInCategory.forEach(item => {
-                        const updatedItemData = { ...item, category: '' }; // Clear category
-                        if (!global.itemService.saveEditedItem(item.id, updatedItemData)) {
-                            console.error("CategoryService: Failed to update item during category deletion:", item.id);
-                            // allItemUpdatesSucceeded = false;
-                            // Decide if this failure should halt or change return value. For now, it continues.
-                        }
-                    });
-                }
+/**
+ * Deletes a category by its name.
+ * If items are associated with this category, their category field will be cleared.
+ * Uses a confirmation function before proceeding with deletion.
+ * Persists the changes.
+ * @param {string} categoryName - The name of the category to delete.
+ * @param {function(string):boolean} confirmFunc - A function that takes a confirmation message and returns true if confirmed, false otherwise.
+ * @returns {boolean} True if the category was deleted, false otherwise (e.g., not found, or confirmation denied).
+ */
+export function deleteCategory(categoryName, confirmFunc) {
+    if (!itemServiceRef) {
+        console.error("CategoryService: itemService is not available.");
+        return false;
+    }
+    const categoryIndex = categories.findIndex(cat => cat.name === categoryName);
+    if (categoryIndex === -1) {
+        console.warn("CategoryService: Category not found for deletion:", categoryName);
+        return false;
+    }
 
-                // Persist the changes.
-                // itemService.saveEditedItem would have persisted item changes.
-                // This call primarily ensures category deletion is saved, along with the latest overall state.
-                const finalItemsForPersistence = global.itemService.getItems().map(i => ({...i}));
-                const currentPacks = (global.packService) ? global.packService.getPacks().map(p => ({...p})) : [];
-                // 'categories' is the updated local array. Ensure it's plain objects for persistence.
-                const plainCategories = categories.map(cat => ({...cat}));
+    const allItems = itemServiceRef.getItems();
+    const itemsInCategory = allItems.filter(item => item.category === categoryName);
+    let doDelete = true;
 
-                if (persistence) {
-                     persistence.saveData(finalItemsForPersistence, currentPacks, plainCategories);
-                } else {
-                    console.error("CategoryService: persistenceService not available in deleteCategory.");
-                }
-
-                return true; // Category deletion processed.
-            }
-            return false;
+    if (confirmFunc && typeof confirmFunc === 'function') {
+        if (itemsInCategory.length > 0) {
+            doDelete = confirmFunc(`La catégorie "${categoryName}" contient ${itemsInCategory.length} item(s). Voulez-vous vraiment la supprimer ? Les items ne seront pas supprimés de votre inventaire mais leur catégorie sera effacée.`);
+        } else {
+            doDelete = confirmFunc(`Voulez-vous vraiment supprimer la catégorie "${categoryName}" ?`);
         }
-    };
-    // console.log('categoryService.js executed, categoryService object created on window.');
-})(typeof window !== 'undefined' ? window : (typeof globalThis !== 'undefined' ? globalThis : this));
+    }
+
+    if (doDelete) {
+        categories.splice(categoryIndex, 1); // Modify internal categories list
+
+        if (itemsInCategory.length > 0) {
+            itemsInCategory.forEach(item => {
+                const updatedItemData = { ...item, category: '' }; // Clear category
+                if (!itemServiceRef.saveEditedItem(item.id, updatedItemData)) {
+                    console.error("CategoryService: Failed to update item during category deletion:", item.id);
+                }
+            });
+        }
+
+        const finalItemsForPersistence = itemServiceRef.getItems().map(i => ({...i}));
+        const currentPacks = (packServiceRef) ? packServiceRef.getPacks().map(p => ({...p})) : [];
+        const plainCategories = categories.map(cat => ({...cat}));
+
+        persistenceService.saveData(finalItemsForPersistence, currentPacks, plainCategories);
+        return true; // Category deletion processed.
+    }
+    return false;
+}
+
+// console.log('categoryService.js executed as ES module');
