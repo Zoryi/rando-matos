@@ -99,7 +99,12 @@ describe('Data Management (PersistenceService Tests)', function() {
         // These are functions that persistenceService tests should NOT be concerned with.
         alertStub = sinon.stub(window, 'alert');
         confirmStub = sinon.stub(window, 'confirm').returns(true);
-        fetchStub = sinon.stub(window, 'fetch').resolves({ ok: true, json: () => Promise.resolve({}) });
+
+        // Mock fetch globally and on the window object for JSDOM
+        const mockFetchResponse = { ok: true, json: () => Promise.resolve({}), text: () => Promise.resolve("mocked text") };
+        global.fetch = sinon.stub().resolves(mockFetchResponse);
+        window.fetch = global.fetch; // Make JSDOM window.fetch use the same global stub
+        fetchStub = global.fetch; // Assign to existing fetchStub variable for potential use in tests if needed
 
         // Evaluate all scripts. persistenceService is among them.
         // app.js will run initApp at its end.
