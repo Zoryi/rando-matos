@@ -1,26 +1,35 @@
-// Global App State (can be defined outside DOMContentLoaded)
-window.items = [];
-window.packs = []; // [{ id: 'pack-id-1', name: 'Nom du Pack' }]
-window.categories = []; // New array for explicitly created categories [{ name: 'Nom Catégorie' }]
-window.currentView = 'all'; // 'all', 'categories', 'pack-{packId}'
-window.currentManagingPackId = null; // Store the ID of the pack being managed
+import * as persistenceService from './services/persistenceService.js';
+import * as itemService from './services/itemService.js';
+import * as packService from './services/packService.js';
+import * as categoryService from './services/categoryService.js';
+import * as apiService from './services/apiService.js';
+import * as uiUtils from './ui/utils/imageUtils.js';
 
-// Global utility functions remaining in app.js (can be defined outside)
-// DOM elements these functions might need are queried within them or passed if necessary.
-// For example, updateCategoryDropdowns queries its elements directly.
-const newItemCategorySelect = document.getElementById('item-category'); // Still needed globally for updateCategoryDropdowns
-const editItemCategorySelect = document.getElementById('edit-item-category'); // Still needed globally for updateCategoryDropdowns
-const viewFilterSelect = document.getElementById('view-filter'); // Still needed globally for updateViewFilterOptions
+import ModalHandler from './ui/modalHandler.js';
+import ItemDisplay from './ui/itemDisplay.js';
+import PackDisplay from './ui/packDisplay.js';
+import CategoryDisplay from './ui/categoryDisplay.js';
+import FormHandler from './ui/formHandler.js';
+import AiFeaturesUI from './ui/aiFeaturesUI.js';
+import NavigationHandler from './ui/navigationHandler.js';
 
-window.updateCategoryDropdowns = function updateCategoryDropdowns() {
-    // Querying elements here since this function is global and DOM might not be ready when it's defined.
-    // However, it's typically called after DOM is ready and services are populated.
-    const newItemCatSelect = document.getElementById('item-category'); // Re-query or use global consts
+// Store component instances - these are not on window anymore
+let modalHandler, itemDisplay, packDisplay, categoryDisplay, navigationHandler;
+// FormHandler and AiFeaturesUI are instantiated but not stored if not needed by other components directly from app.js
+
+// App-level state (if any truly global state remains beyond service-managed state)
+// For now, currentView and currentManagingPackId are primarily managed by UI components themselves or passed around.
+// Let's keep a global currentView for updateViewFilterOptions for now.
+let currentView = 'all';
+
+
+function updateCategoryDropdowns() {
+    const newItemCatSelect = document.getElementById('item-category');
     const editItemCatSelect = document.getElementById('edit-item-category');
 
-    if (!newItemCatSelect || !editItemCatSelect || !window.categoryService) return;
+    if (!newItemCatSelect || !editItemCatSelect || !categoryService) return;
     const categorySelects = [newItemCatSelect, editItemCatSelect];
-    const currentCategories = window.categoryService.getCategories();
+    const currentCategories = categoryService.getCategories();
 
     categorySelects.forEach(selectElement => {
         const currentValue = selectElement.value;
@@ -37,63 +46,58 @@ window.updateCategoryDropdowns = function updateCategoryDropdowns() {
             selectElement.value = '';
         }
     });
-};
+}
 
-window.updateViewFilterOptions = function updateViewFilterOptions() {
-    const viewFilter = document.getElementById('view-filter'); // Re-query or use global const
-    if (!viewFilter || !window.packService) return;
+function updateViewFilterOptions() {
+    const viewFilter = document.getElementById('view-filter');
+    if (!viewFilter || !packService) return;
 
-    // Remove previous pack options
+    // Store current selected value to try and restore it
+    const currentFilterValue = viewFilter.value;
+
     viewFilter.querySelectorAll('option[value^="pack-"]').forEach(option => option.remove());
-    const currentPacks = window.packService.getPacks();
+    const currentPacks = packService.getPacks();
     currentPacks.forEach(pack => {
         const option = document.createElement('option');
         option.value = `pack-${pack.id}`;
         option.textContent = `Voir Pack : ${pack.name}`;
         viewFilter.appendChild(option);
     });
-    if (!viewFilter.querySelector(`option[value="${window.currentView}"]`)) {
-        window.currentView = 'all';
+
+    // Try to restore previous selection, or default to 'all'
+    if (Array.from(viewFilter.options).some(option => option.value === currentFilterValue)) {
+        viewFilter.value = currentFilterValue;
+    } else if (!viewFilter.querySelector(`option[value="${currentView}"]`)) {
+         // If currentView is also not in options (e.g. a deleted pack view), default to 'all'
+        currentView = 'all'; // Update the module-level currentView
         viewFilter.value = 'all';
-    }
-};
-
-window.renderAll = function renderAll() {
-    if (window.packDisplay && typeof window.packDisplay.renderPacks === 'function') {
-        window.packDisplay.renderPacks();
-    }
-    if (window.itemDisplay && typeof window.itemDisplay.renderListByView === 'function') {
-        window.itemDisplay.renderListByView();
-    }
-    if (window.categoryDisplay && typeof window.categoryDisplay.renderCategoryManagement === 'function') {
-        window.categoryDisplay.renderCategoryManagement();
-    }
-    if (typeof window.updateCategoryDropdowns === 'function') window.updateCategoryDropdowns();
-};
-
-window.togglePacked = function togglePacked(itemId) {
-    if (!window.itemService) return;
-    const item = window.itemService.getItemById(itemId);
-    if (item) {
-        // Assuming item instance has 'packed' property and services handle Item model instances
-        item.packed = !item.packed;
-        if (window.itemService.saveEditedItem(itemId, item)) { // Pass item instance or plain object as expected by service
-            if (typeof window.renderAll === 'function') window.renderAll();
-        } else {
-            alert("Failed to update item packed status.");
-        }
+        if(itemDisplay) itemDisplay.currentView = 'all'; // Also update itemDisplay's view
     } else {
-        console.error(`Item with ID ${itemId} not found for togglePacked.`);
+        viewFilter.value = currentView; // Set to currentView if it's still valid
     }
-};
+}
 
-// Main application logic that depends on DOM being ready
+function renderAll() {
+    if (packDisplay && typeof packDisplay.renderPacks === 'function') {
+        packDisplay.renderPacks();
+    }
+    if (itemDisplay && typeof itemDisplay.renderListByView === 'function') {
+        itemDisplay.renderListByView();
+    }
+    if (categoryDisplay && typeof categoryDisplay.renderCategoryManagement === 'function') {
+        categoryDisplay.renderCategoryManagement();
+    }
+    updateCategoryDropdowns(); // This was called by some components, ensure it's still called.
+                               // Or components should call it directly if they have the ref.
+}
+
+// togglePacked is no longer global. It's implicitly handled by PackDisplay event listeners
+// which call itemService methods, and then renderAll updates the UI.
+
 document.addEventListener('DOMContentLoaded', () => {
-    // DOM elements needed for NavigationHandler
     const sidebarLinks = document.querySelectorAll('.sidebar nav ul li a');
     const contentSections = document.querySelectorAll('.main-content .content-section');
 
-    // DOM elements for simple global event listeners remaining in app.js
     const newItemImageUrlInput = document.getElementById('item-image-url');
     const newItemImagePreview = document.getElementById('new-item-image-preview');
     const editItemImageUrlInput = document.getElementById('edit-item-image-url');
@@ -101,103 +105,70 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (newItemImageUrlInput && newItemImagePreview) {
         newItemImageUrlInput.addEventListener('input', () => {
-            if (window.uiUtils && typeof window.uiUtils.updateImagePreview === 'function') {
-                window.uiUtils.updateImagePreview(newItemImageUrlInput.value, newItemImagePreview);
-            }
+            uiUtils.updateImagePreview(newItemImageUrlInput.value, newItemImagePreview);
         });
     }
     if (editItemImageUrlInput && editItemImagePreview) {
         editItemImageUrlInput.addEventListener('input', () => {
-            if (window.uiUtils && typeof window.uiUtils.updateImagePreview === 'function') {
-                window.uiUtils.updateImagePreview(editItemImageUrlInput.value, editItemImagePreview);
-            }
+            uiUtils.updateImagePreview(editItemImageUrlInput.value, editItemImagePreview);
         });
     }
 
     async function initApp() {
-        console.log('initApp started. Checking critical dependencies...');
-        console.log('Checking window.persistenceService:', typeof window.persistenceService, window.persistenceService ? 'Exists' : 'MISSING!');
-        console.log('Checking window.itemService:', typeof window.itemService, window.itemService ? 'Exists' : 'MISSING!');
-        console.log('Checking window.packService:', typeof window.packService, window.packService ? 'Exists' : 'MISSING!');
-        console.log('Checking window.categoryService:', typeof window.categoryService, window.categoryService ? 'Exists' : 'MISSING!');
-        console.log('Checking window.apiService:', typeof window.apiService, window.apiService ? 'Exists' : 'MISSING!');
-        console.log('Checking window.uiUtils:', typeof window.uiUtils, window.uiUtils ? 'Exists' : 'MISSING!');
-        console.log('Checking window.appModels:', typeof window.appModels, window.appModels ? 'Exists' : 'MISSING!');
-        console.log('Checking window.appComponents:', typeof window.appComponents, window.appComponents ? 'Exists' : 'MISSING!');
+        console.log('initApp started (ESM).');
 
-        // Existing check (can be kept or modified based on individual checks)
-        if (!window.persistenceService || !window.itemService || !window.packService || !window.categoryService || !window.apiService || !window.uiUtils || !window.appModels || !window.appComponents) {
-            console.error("One or more core services, models, utils, or component namespaces not available. App cannot initialize fully. Check script loading order and individual script errors. The logs above indicate which specific globals are problematic.");
-            // Optionally, you might want to prevent further execution if critical parts are missing.
-            // For now, the original code proceeds, so we'll allow it to proceed to see further errors if any.
-            // return; // Or throw new Error(...);
-        }
+        // Initialize services with data
+        const data = persistenceService.loadData();
+        itemService.setItems(data.items);
+        packService.setPacks(data.packs);
+        categoryService.setCategories(data.categories);
 
-        const data = window.persistenceService.loadData(); // This line would fail if persistenceService is undefined
-        window.itemService.setItems(data.items);
-        window.packService.setPacks(data.packs);
-        window.categoryService.setCategories(data.categories);
+        // Setup inter-service dependencies if any were deferred
+        // (Example: if itemService needed packService, call itemService.setPackService(packService))
+        categoryService.setItemService(itemService);
+        categoryService.setPackService(packService);
+        itemService.setPackService(packService);
+        itemService.setCategoryService(categoryService);
+        packService.setItemService(itemService);
+        packService.setCategoryService(categoryService);
 
-        window.items = window.itemService.getItems();
-        window.packs = window.packService.getPacks();
-        window.categories = window.categoryService.getCategories();
 
-        // Instantiate components
-        if (window.appComponents && window.appComponents.ModalHandler) {
-            window.modalHandler = new window.appComponents.ModalHandler(window.itemService, window.uiUtils);
-        } else { console.error("ModalHandler class or its dependencies not found."); }
+        // Instantiate UI components
+        modalHandler = new ModalHandler(itemService, uiUtils, updateCategoryDropdowns, renderAll);
+        itemDisplay = new ItemDisplay(itemService, categoryService, modalHandler, renderAll);
+        // Pass navigationHandler ref later if packDisplay needs it, or handle navigation via app controller
+        packDisplay = new PackDisplay(packService, itemService, modalHandler, null /*nav handler ref*/, renderAll, updateViewFilterOptions);
+        categoryDisplay = new CategoryDisplay(categoryService, itemService, modalHandler, updateCategoryDropdowns, itemDisplay);
 
-        if (window.appComponents && window.appComponents.ItemDisplay) {
-            window.itemDisplay = new window.appComponents.ItemDisplay(window.itemService, window.categoryService);
-        } else { console.error("ItemDisplay class or its dependencies not found."); }
+        navigationHandler = new NavigationHandler(
+            contentSections, sidebarLinks,
+            itemDisplay, packDisplay, categoryDisplay,
+            null, /* formHandler not directly used by nav */
+            modalHandler,
+            null, /* aiFeaturesUI not directly used by nav */
+            uiUtils,
+            updateCategoryDropdowns
+        );
+        // Assign navigationHandler to packDisplay if it needs it
+        packDisplay.navigationHandlerRef = navigationHandler;
 
-        if (window.appComponents && window.appComponents.PackDisplay) {
-            window.packDisplay = new window.appComponents.PackDisplay(window.packService, window.itemService, window.modalHandler);
-        } else { console.error("PackDisplay class or its dependencies not found."); }
 
-        if (window.appComponents && window.appComponents.CategoryDisplay) {
-            window.categoryDisplay = new window.appComponents.CategoryDisplay(window.categoryService, window.itemService, window.modalHandler);
-        } else { console.error("CategoryDisplay class or its dependencies not found."); }
+        new FormHandler(
+            itemService, packService, categoryService, modalHandler,
+            itemDisplay, packDisplay, categoryDisplay,
+            uiUtils, renderAll, updateViewFilterOptions, updateCategoryDropdowns
+        );
 
-        if (window.appComponents && window.appComponents.FormHandler && window.modalHandler && window.itemDisplay && window.packDisplay && window.categoryDisplay) {
-            new window.appComponents.FormHandler(
-                window.itemService, window.packService, window.categoryService, window.modalHandler,
-                window.itemDisplay, window.packDisplay, window.categoryDisplay
-            );
-        } else { console.error("FormHandler class or its dependencies not found."); }
+        new AiFeaturesUI(
+            apiService, itemService, categoryService, uiUtils,
+            updateCategoryDropdowns, renderAll
+        );
 
-        if (window.appComponents && window.appComponents.AiFeaturesUI && window.apiService && window.itemService && window.categoryService && window.uiUtils) {
-            new window.appComponents.AiFeaturesUI(window.apiService, window.itemService, window.categoryService, window.uiUtils);
-        } else { console.error("AiFeaturesUI class or its dependencies not found."); }
-
-        if (window.appComponents && window.appComponents.NavigationHandler && contentSections.length > 0 && sidebarLinks.length > 0 &&
-            window.itemDisplay && window.packDisplay && window.categoryDisplay && window.modalHandler) {
-            window.navigationHandler = new window.appComponents.NavigationHandler(
-                contentSections, sidebarLinks,
-                window.itemDisplay, window.packDisplay, window.categoryDisplay,
-                null, window.modalHandler, null
-            );
-            window.navigationHandler.showSection('inventory-section');
-        } else {
-            console.error("NavigationHandler class or its crucial DOM/component dependencies not found. Sidebar links length:", sidebarLinks.length, "Content sections length:", contentSections.length);
-        }
-
-        if (typeof window.renderAll === 'function') {
-            window.renderAll();
-        }
+        // Initial render and view setup
+        navigationHandler.showSection('inventory-section'); // This will also trigger initial render for itemDisplay
+        renderAll(); // Initial full render
+        updateViewFilterOptions(); // Populate pack filters
     }
 
     initApp();
 });
-
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = {
-        items: typeof window !== 'undefined' ? window.items : undefined,
-        packs: typeof window !== 'undefined' ? window.packs : undefined,
-        categories: typeof window !== 'undefined' ? window.categories : undefined,
-        renderAll: typeof window !== 'undefined' ? window.renderAll : undefined,
-        updateCategoryDropdowns: typeof window !== 'undefined' ? window.updateCategoryDropdowns : undefined,
-        updateViewFilterOptions: typeof window !== 'undefined' ? window.updateViewFilterOptions : undefined,
-        togglePacked: typeof window !== 'undefined' ? window.togglePacked : undefined
-    };
-}

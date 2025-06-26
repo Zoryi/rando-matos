@@ -1,117 +1,109 @@
 // ui/navigationHandler.js
-(function(global) {
-    "use strict";
+"use strict";
 
-    class NavigationHandler {
-        constructor(sections, links, itemDisplay, packDisplay, categoryDisplay, formHandler, modalHandler, aiFeaturesUI) {
-            this.contentSections = sections; // NodeList of content sections
-            this.sidebarLinks = links;     // NodeList of sidebar links
-            this.itemDisplay = itemDisplay; // Instance of ItemDisplay
-            this.packDisplay = packDisplay; // Instance of PackDisplay
-            this.categoryDisplay = categoryDisplay; // Instance of CategoryDisplay
-            this.formHandler = formHandler; // Instance of FormHandler (or null)
-            this.modalHandler = modalHandler; // Instance of ModalHandler
-            this.aiFeaturesUI = aiFeaturesUI; // Instance of AiFeaturesUI (or null)
-            // Note: formHandler and aiFeaturesUI are not actively used by NavigationHandler yet,
-            // but are included for future consistency if NavigationHandler needs to coordinate with them.
+// Assumes component instances (itemDisplay, packDisplay, etc.) and global functions
+// (updateCategoryDropdowns, uiUtils.updateImagePreview) are passed in.
 
-            this.currentView = 'inventory-section'; // Default view
+export default class NavigationHandler {
+    constructor(
+        sections, links,
+        itemDisplay, packDisplay, categoryDisplay,
+        formHandler, modalHandler, aiFeaturesUI,
+        uiUtils, // for updateImagePreview
+        globalUpdateCategoryDropdowns // function ref
+    ) {
+        this.contentSections = sections;
+        this.sidebarLinks = links;
+        this.itemDisplay = itemDisplay;
+        this.packDisplay = packDisplay;
+        this.categoryDisplay = categoryDisplay;
+        this.formHandler = formHandler; // May not be used directly by NavHandler
+        this.modalHandler = modalHandler;
+        this.aiFeaturesUI = aiFeaturesUI; // May not be used directly by NavHandler
+        this.uiUtils = uiUtils;
+        this.globalUpdateCategoryDropdowns = globalUpdateCategoryDropdowns;
 
-            this._setupEventListeners();
-        }
+        // this.currentView is managed by app.js or by individual display components for their needs.
+        // NavigationHandler focuses on switching visibility.
 
-        _setupEventListeners() {
-            this.sidebarLinks.forEach(link => {
-                link.addEventListener('click', (event) => {
-                    event.preventDefault();
-                    const sectionId = link.dataset.section + '-section';
+        this._setupEventListeners();
+    }
+
+    _setupEventListeners() {
+        this.sidebarLinks.forEach(link => {
+            link.addEventListener('click', (event) => {
+                event.preventDefault();
+                const sectionId = link.dataset.section + '-section';
+                // If navigating to pack-detail, ensure a pack is selected, otherwise redirect.
+                // This logic might be better placed in PackDisplay or a central app controller.
+                if (sectionId === 'pack-detail-section' && this.packDisplay && !this.packDisplay.currentManagingPackId) {
+                    this.showSection('manage-packs-section');
+                } else {
                     this.showSection(sectionId);
-                });
+                }
             });
-        }
+        });
+    }
 
-        // This showSection is moved from app.js
-        // It will need further refactoring to call methods on display components
-        // instead of global render functions if those components take over rendering.
-        showSection(sectionId) {
-            // Close edit item modal if it's open
-            if (this.modalHandler &&
-                this.modalHandler.editItemModal &&
-                this.modalHandler.editItemModal.style.display === 'block') {
+    showSection(sectionId) {
+        if (this.modalHandler) {
+            if (this.modalHandler.editItemModal && this.modalHandler.editItemModal.style.display === 'block') {
                 this.modalHandler.closeEditModal();
             }
-
-            // Close pack packing modal if it's open
-            if (this.modalHandler &&
-                this.modalHandler.packPackingModal &&
-                !this.modalHandler.packPackingModal.classList.contains('hidden')) {
+            if (this.modalHandler.packPackingModal && !this.modalHandler.packPackingModal.classList.contains('hidden')) {
                 this.modalHandler.closePackPackingModal();
             }
+        }
 
-            this.contentSections.forEach(section => {
-                if (section.id === sectionId) {
-                    section.classList.add('active');
-                } else {
-                    section.classList.remove('active');
-                }
-            });
+        this.contentSections.forEach(section => {
+            section.classList.toggle('active', section.id === sectionId);
+        });
 
-            this.sidebarLinks.forEach(link => {
-                const linkTargetSectionId = link.dataset.section + '-section';
-                if (linkTargetSectionId === sectionId ||
-                    (link.dataset.section === 'manage-packs' && sectionId === 'pack-detail-section')) {
-                    link.classList.add('active');
-                } else {
-                    link.classList.remove('active');
-                }
-            });
+        this.sidebarLinks.forEach(link => {
+            const linkTargetSectionId = link.dataset.section + '-section';
+            const isActive = linkTargetSectionId === sectionId ||
+                             (link.dataset.section === 'manage-packs' && sectionId === 'pack-detail-section');
+            link.classList.toggle('active', isActive);
+        });
 
-            // Update global currentView for now, might be managed internally or via app later
-            if (global.window) global.window.currentView = sectionId;
+        // Update the currentView property of itemDisplay if it's the inventory section
+        if (this.itemDisplay && sectionId === 'inventory-section') {
+             // Default to 'all' if currentView on itemDisplay is not set or relevant
+            this.itemDisplay.currentView = this.itemDisplay.viewFilterSelect.value || 'all';
+        }
 
 
-            // Current rendering calls - these will need to be updated as components take responsibility
-            // For example, instead of global.renderListByView, it might be this.itemDisplay.renderListByView()
-            // Or this.itemDisplay.render('all') etc.
-            if (sectionId === 'inventory-section') {
-                if (this.itemDisplay && typeof this.itemDisplay.renderListByView === 'function') {
-                    this.itemDisplay.renderListByView();
-                }
-            } else if (sectionId === 'new-item-section') {
-                if (typeof global.updateCategoryDropdowns === 'function') global.updateCategoryDropdowns();
-                const newItemImageUrlInput = document.getElementById('item-image-url'); // Temporary direct DOM access
-                const newItemImagePreview = document.getElementById('new-item-image-preview'); // Temporary
-                if (newItemImageUrlInput && newItemImagePreview && typeof global.uiUtils.updateImagePreview === 'function') {
-                     global.uiUtils.updateImagePreview(newItemImageUrlInput.value, newItemImagePreview);
-                }
-            } else if (sectionId === 'manage-packs-section') {
-                if (this.packDisplay && typeof this.packDisplay.renderPacks === 'function') {
-                    this.packDisplay.renderPacks();
-                }
-            } else if (sectionId === 'pack-detail-section') {
-                // currentManagingPackId is now primarily managed by packDisplay instance
-                if (this.packDisplay && typeof this.packDisplay.renderPackDetail === 'function' && this.packDisplay.currentManagingPackId) {
-                    this.packDisplay.renderPackDetail(this.packDisplay.currentManagingPackId);
-                } else if (this.packDisplay && !this.packDisplay.currentManagingPackId) {
-                    // If packDisplay exists but no pack is selected (e.g. direct navigation attempt), show pack list
-                    if (global.navigationHandler) global.navigationHandler.showSection('manage-packs-section');
-                }
-            } else if (sectionId === 'manage-categories-section') {
-                if (this.categoryDisplay && typeof this.categoryDisplay.renderCategoryManagement === 'function') {
-                    this.categoryDisplay.renderCategoryManagement();
-                }
-            } else if (sectionId === 'generate-pack-section') {
-                const generatedItemsListElement = document.getElementById('generated-items-list'); // Temporary
-                const generatedPackResultsDiv = document.getElementById('generated-pack-results'); // Temporary
-                if (generatedItemsListElement) generatedItemsListElement.innerHTML = '<li class="text-center text-gray-500">Aucune suggestion d\'item générée. Veuillez utiliser le formulaire ci-dessus.</li>';
-                if (generatedPackResultsDiv) generatedPackResultsDiv.classList.remove('hidden');
+        // Trigger rendering or updates for the activated section
+        if (sectionId === 'inventory-section') {
+            if (this.itemDisplay && typeof this.itemDisplay.renderListByView === 'function') {
+                this.itemDisplay.renderListByView(); // ItemDisplay now uses its own currentView
             }
+        } else if (sectionId === 'new-item-section') {
+            if (this.globalUpdateCategoryDropdowns) this.globalUpdateCategoryDropdowns();
+            const newItemImageUrlInput = document.getElementById('item-image-url');
+            const newItemImagePreview = document.getElementById('new-item-image-preview');
+            if (newItemImageUrlInput && newItemImagePreview && this.uiUtils && typeof this.uiUtils.updateImagePreview === 'function') {
+                 this.uiUtils.updateImagePreview(newItemImageUrlInput.value, newItemImagePreview);
+            }
+        } else if (sectionId === 'manage-packs-section') {
+            if (this.packDisplay && typeof this.packDisplay.renderPacks === 'function') {
+                this.packDisplay.renderPacks();
+            }
+        } else if (sectionId === 'pack-detail-section') {
+            if (this.packDisplay && typeof this.packDisplay.renderPackDetail === 'function' && this.packDisplay.currentManagingPackId) {
+                this.packDisplay.renderPackDetail(this.packDisplay.currentManagingPackId);
+            }
+            // If no pack ID, the listener in _setupEventListeners should redirect to manage-packs-section.
+        } else if (sectionId === 'manage-categories-section') {
+            if (this.categoryDisplay && typeof this.categoryDisplay.renderCategoryManagement === 'function') {
+                this.categoryDisplay.renderCategoryManagement();
+            }
+        } else if (sectionId === 'generate-pack-section') {
+            // Reset UI elements specific to this section if needed
+            const generatedItemsListElement = document.getElementById('generated-items-list');
+            const generatedPackResultsDiv = document.getElementById('generated-pack-results');
+            if (generatedItemsListElement) generatedItemsListElement.innerHTML = '<li class="text-center text-gray-500">Aucune suggestion d\'item générée. Veuillez utiliser le formulaire ci-dessus.</li>';
+            if (generatedPackResultsDiv) generatedPackResultsDiv.classList.remove('hidden'); // Ensure it's visible
         }
     }
-
-    if (!global.appComponents) {
-        global.appComponents = {};
-    }
-    global.appComponents.NavigationHandler = NavigationHandler;
-
-})(typeof window !== 'undefined' ? window : this);
+}

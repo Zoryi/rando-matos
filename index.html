@@ -11,24 +11,8 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <script src="models/Item.js"></script>
-    <script src="models/Pack.js"></script>
-    <script src="models/Category.js"></script>
-    <script src="ui/utils/imageUtils.js"></script>
-    <script src="services/persistenceService.js"></script>
-    <script src="services/categoryService.js"></script>
-    <script src="services/itemService.js"></script>
-    <script src="services/packService.js"></script>
-    <script src="services/apiService.js"></script>
-    <script src="ui/aiFeaturesUI.js"></script>
-    <script src="ui/modalHandler.js"></script>
-    <script src="ui/itemDisplay.js"></script>
-    <script src="ui/packDisplay.js"></script>
-    <script src="ui/categoryDisplay.js"></script>
-    <script src="ui/navigationHandler.js"></script>
-    <script src="ui/formHandler.js"></script>
-    <!-- app.js should be loaded after all services and utils -->
-    <script src="app.js"></script>
+    <!-- Load app.js as a module. It will import other necessary scripts. -->
+    <script type="module" src="app.js"></script>
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
