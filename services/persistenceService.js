@@ -147,3 +147,34 @@ export function loadData() {
 
     return { items: loadedItems, packs: loadedPacks, categories: loadedCategories, exampleDataUsed };
 }
+
+/**
+ * Clears all data (items, packs, categories) from localStorage.
+ */
+export function clearData() {
+    if (typeof localStorage === 'undefined') {
+        console.warn("localStorage is not available. Data will not be cleared.");
+        return;
+    }
+    // Instead of localStorage.clear(), remove specific keys to avoid clearing other potential data.
+    localStorage.removeItem('backpackItems');
+    localStorage.removeItem('backpackPacks');
+    localStorage.removeItem('backpackCategories');
+    // If a more generic clear is needed for all app-specific keys, a prefixing strategy would be better.
+    // For now, sticking to the known keys. If the intention of "clearData" is to wipe *everything* related
+    // to this app, then this is correct. If it's a general "clear all of localStorage", then localStorage.clear()
+    // would be the call, but that's usually too broad for a single module.
+    // Given the context of saveData/loadData, clearing these specific keys seems appropriate.
+}
+
+/**
+ * Deletes a specific key from localStorage.
+ * @param {string} key - The key to delete.
+ */
+export function deleteKey(key) {
+    if (typeof localStorage === 'undefined') {
+        console.warn(`localStorage is not available. Cannot delete key: ${key}`);
+        return;
+    }
+    localStorage.removeItem(key);
+}
