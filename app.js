@@ -9,7 +9,6 @@ import ModalHandler from './ui/modalHandler.js';
 import ItemDisplay from './ui/itemDisplay.js';
 import PackDisplay from './ui/packDisplay.js';
 import * as domIds from './ui/constants/domIds.js';
-// import * as cssClasses from './ui/constants/cssClasses.js'; // If needed in app.js
 import CategoryDisplay from './ui/categoryDisplay.js';
 import FormHandler from './ui/formHandler.js';
 import AiFeaturesUI from './ui/aiFeaturesUI.js';
