@@ -1,18 +1,14 @@
 // services/itemService.js
 (function(global) {
     "use strict";
-    // console.log('Executing itemService.js');
+    const Item = (global.appModels && global.appModels.Item) ? global.appModels.Item : class DefaultItem { constructor(data) { Object.assign(this, data); } }; // Fallback if model not loaded
+
     let items = []; // Internal state for items
 
-    // Ensure persistenceService is available (it should be loaded/eval'd before this service)
+    // Ensure persistenceService is available
     const persistence = global.persistenceService || {
-        saveData: () => {
-            // console.warn("persistenceService.saveData not found in itemService. This is a mock stub.");
-        },
-        loadData: () => {
-            // console.warn("persistenceService.loadData not found in itemService, returning empty defaults. This is a mock stub.");
-            return { items: [], packs: [], categories: [], exampleDataUsed: true };
-        }
+        saveData: () => {},
+        loadData: () => ({ items: [], packs: [], categories: [], exampleDataUsed: true })
     };
 
     function generateItemId() {
@@ -21,41 +17,37 @@
 
     global.itemService = {
         setItems: function(newItems) {
-            items = newItems ? JSON.parse(JSON.stringify(newItems)) : []; // Store a deep copy
+            items = newItems ? newItems.map(itemData => itemData instanceof Item ? itemData : new Item(itemData)) : [];
         },
         getItems: function() {
-            return JSON.parse(JSON.stringify(items)); // Return a deep copy
+            // Return instances directly if further manipulation relies on Item methods,
+            // or deep copies if strict isolation is paramount and consumers expect plain objects.
+            // For now, returning instances is fine as per plan.
+            return items.map(item => new Item(item)); // Return new instances (deep enough copy for model properties)
         },
         getItemById: function(itemId) {
             const item = items.find(item => item.id === itemId);
-            return item ? JSON.parse(JSON.stringify(item)) : undefined; // Return a deep copy
+            return item ? new Item(item) : undefined; // Return a new instance
         },
         addItem: function(itemData) {
             if (!itemData || typeof itemData.name !== 'string' || itemData.name.trim() === '' ||
                 itemData.weight === undefined || isNaN(parseFloat(itemData.weight)) || parseFloat(itemData.weight) < 0) {
-                // console.error("ItemService: Invalid item data for add. Name and valid weight are required.");
                 return null;
             }
-            const newItem = {
+            // The Item constructor will handle defaults for missing optional fields
+            const newItem = new Item({
                 id: generateItemId(),
-                name: itemData.name.trim(),
-                weight: parseFloat(itemData.weight),
-                brand: itemData.brand || '',
-                category: itemData.category || '',
-                tags: Array.isArray(itemData.tags) ? itemData.tags : ((typeof itemData.tags === 'string' && itemData.tags.trim()) ? itemData.tags.split(',').map(t => t.trim()) : []),
-                capacity: itemData.capacity || '',
-                imageUrl: itemData.imageUrl || '',
-                isConsumable: !!itemData.isConsumable, // Ensure boolean
-                packIds: [], // New items are not in any pack initially
-                packed: false // New items are not packed initially
-            };
+                ...itemData // Spread incoming data, constructor handles the rest
+            });
             items.push(newItem);
-            // Assumes packs/categories are managed globally or by other services for now.
+
             // persistenceService.saveData expects all three arrays.
-            const currentPacks = (global.window && global.window.packs) ? global.window.packs : [];
-            const currentCategories = (global.window && global.window.categories) ? global.window.categories : [];
-            persistence.saveData(items, currentPacks, currentCategories);
-            return JSON.parse(JSON.stringify(newItem)); // Return a copy
+            // These will be plain objects when stringified, which is fine for persistence.
+            const plainItems = items.map(item => ({...item})); // Convert instances to plain objects for saving
+            const currentPacks = (global.packService) ? global.packService.getPacks().map(p => ({...p})) : [];
+            const currentCategories = (global.categoryService) ? global.categoryService.getCategories().map(c => ({...c})) : [];
+            persistence.saveData(plainItems, currentPacks, currentCategories);
+            return new Item(newItem); // Return a new instance
         },
         deleteItem: function(itemId, confirmFunc) {
             const itemIndex = items.findIndex(item => item.id === itemId);
@@ -82,20 +74,40 @@
             if (itemIndex === -1) return null;
 
             const originalItem = items[itemIndex];
-            items[itemIndex] = {
-                ...originalItem, // Preserve existing packIds, packed status etc.
-                name: updatedData.name.trim(),
-                weight: parseFloat(updatedData.weight),
-                brand: updatedData.brand !== undefined ? updatedData.brand : originalItem.brand,
-                category: updatedData.category !== undefined ? updatedData.category : originalItem.category,
-                tags: updatedData.tags !== undefined ? (Array.isArray(updatedData.tags) ? updatedData.tags : ((typeof updatedData.tags === 'string' && updatedData.tags.trim()) ? updatedData.tags.split(',').map(t => t.trim()) : [])) : originalItem.tags,
-                capacity: updatedData.capacity !== undefined ? updatedData.capacity : originalItem.capacity,
-                imageUrl: updatedData.imageUrl !== undefined ? updatedData.imageUrl : originalItem.imageUrl,
-                isConsumable: updatedData.isConsumable !== undefined ? !!updatedData.isConsumable : originalItem.isConsumable,
+            // Merge updatedData with originalItem, updatedData takes precedence
+            const mergedData = {
+                ...originalItem,
+                ...updatedData
             };
-            const currentPacks = (global.window && global.window.packs) ? global.window.packs : [];
-            const currentCategories = (global.window && global.window.categories) ? global.window.categories : [];
-            persistence.saveData(items, currentPacks, currentCategories);
+
+            // Assign to items array, ensuring specific fields are correctly formatted
+            items[itemIndex] = {
+                ...mergedData, // Start with all merged fields (id, packIds, packed, etc.)
+                name: mergedData.name ? mergedData.name.trim() : '', // Ensure name is a string and trimmed
+                weight: parseFloat(mergedData.weight) || 0, // Ensure weight is a number
+                // Ensure tags are an array, handling various input possibilities
+                tags: mergedData.tags !== undefined ?
+                      (Array.isArray(mergedData.tags) ? mergedData.tags :
+                      ((typeof mergedData.tags === 'string' && mergedData.tags.trim()) ? mergedData.tags.split(',').map(t => t.trim()) : []))
+                      : [], // Default to empty array if tags is undefined
+                // Ensure boolean fields are booleans
+                isConsumable: !!mergedData.isConsumable,
+                packed: !!mergedData.packed,
+                // Ensure packIds is an array
+                packIds: Array.isArray(mergedData.packIds) ? mergedData.packIds : [],
+            };
+
+            // Correctly use service layer for persistence data
+            const plainItems = items.map(item => ({...item}));
+            const currentPacks = (global.packService) ? global.packService.getPacks().map(p => ({...p})) : [];
+            const currentCategories = (global.categoryService) ? global.categoryService.getCategories().map(c => ({...c})) : [];
+
+            if (persistence) { // Use the already defined persistence const from top of the file
+                persistence.saveData(plainItems, currentPacks, currentCategories);
+            } else {
+                console.error("ItemService: persistenceService not available in saveEditedItem.");
+                return null; // Indicate failure if persistence is not available
+            }
             return JSON.parse(JSON.stringify(items[itemIndex])); // Return a copy
         }
     };

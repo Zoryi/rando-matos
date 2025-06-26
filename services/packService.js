@@ -1,14 +1,12 @@
 // services/packService.js
 (function(global) {
     "use strict";
-    // console.log('Executing packService.js');
+    const Pack = (global.appModels && global.appModels.Pack) ? global.appModels.Pack : class DefaultPack { constructor(data) { Object.assign(this, data); } };
+
     let packs = []; // Internal state for packs
 
-    const persistence = global.persistenceService || {
-        saveData: () => {
-            // console.warn("PackService: persistenceService.saveData not found. This is a mock stub.");
-        }
-    };
+    // persistenceService is expected to be on global and initialized
+    const persistence = global.persistenceService;
 
     function generatePackId() {
         return 'pack-' + Date.now().toString() + Math.random().toString(36).substring(2, 9);
@@ -16,14 +14,14 @@
 
     global.packService = {
         setPacks: function(newPacks) {
-            packs = newPacks ? JSON.parse(JSON.stringify(newPacks)) : []; // Deep copy
+            packs = newPacks ? newPacks.map(packData => packData instanceof Pack ? packData : new Pack(packData)) : [];
         },
         getPacks: function() {
-            return JSON.parse(JSON.stringify(packs)); // Deep copy
+            return packs.map(pack => new Pack(pack)); // Return new instances
         },
         getPackById: function(packId) {
             const pack = packs.find(p => p.id === packId);
-            return pack ? JSON.parse(JSON.stringify(pack)) : undefined; // Deep copy
+            return pack ? new Pack(pack) : undefined; // Return a new instance
         },
 
         addPack: function(packName) {
@@ -32,110 +30,151 @@
                 else console.error("PackService: Invalid pack name.");
                 return null;
             }
-            const newPack = { id: generatePackId(), name: packName.trim() };
+            const newPack = new Pack({ id: generatePackId(), name: packName.trim() });
             packs.push(newPack);
-            const currentItems = (global.window && global.window.items) ? global.window.items : [];
-            const currentCategories = (global.window && global.window.categories) ? global.window.categories : [];
-            persistence.saveData(currentItems, packs, currentCategories);
-            return JSON.parse(JSON.stringify(newPack)); // Return a copy
+
+            // Persistence for the new pack
+            const plainPacks = packs.map(pack => ({...pack}));
+            const currentItems = (global.itemService) ? global.itemService.getItems().map(i => ({...i})) : [];
+            const currentCategories = (global.categoryService) ? global.categoryService.getCategories().map(c => ({...c})) : [];
+            if (persistence) {
+                persistence.saveData(currentItems, plainPacks, currentCategories);
+            } else {
+                console.error("PackService: persistenceService not available in addPack.");
+            }
+            return new Pack(newPack); // Return a new instance
         },
 
         deletePack: function(packId, confirmFunc) {
+            if (!global.itemService) {
+                console.error("packService: itemService is not available.");
+                return false;
+            }
             const packIndex = packs.findIndex(p => p.id === packId);
             if (packIndex === -1) return false;
             const packName = packs[packIndex].name;
 
-            const currentItems = (global.window && global.window.items) ? global.window.items : [];
-            const itemsInPack = currentItems.filter(item => item.packIds && item.packIds.includes(packId));
+            const allItems = global.itemService.getItems();
+            const itemsThatWereInPack = allItems.filter(item => item.packIds && item.packIds.includes(packId));
 
             let doDelete = true;
             if (confirmFunc && typeof confirmFunc === 'function') {
-                if (itemsInPack.length > 0) {
-                    doDelete = confirmFunc(`Ce pack contient ${itemsInPack.length} item(s). Voulez-vous vraiment le supprimer ? Les items ne seront pas supprimés de votre inventaire mais retirés de ce pack.`);
+                if (itemsThatWereInPack.length > 0) {
+                    doDelete = confirmFunc(`Ce pack contient ${itemsThatWereInPack.length} item(s). Voulez-vous vraiment le supprimer ? Les items ne seront pas supprimés de votre inventaire mais retirés de ce pack.`);
                 } else {
                     doDelete = confirmFunc(`Voulez-vous vraiment supprimer le pack "${packName}" ?`);
                 }
             }
 
             if (doDelete) {
-                packs.splice(packIndex, 1);
-                // Update items in the global window.items array
-                if (global.window && global.window.items && Array.isArray(global.window.items)) {
-                    global.window.items = global.window.items.map(item => {
-                        if (item.packIds && item.packIds.includes(packId)) {
-                            const newPackIds = item.packIds.filter(id => id !== packId);
-                            return { ...item, packIds: newPackIds };
+                packs.splice(packIndex, 1); // Remove pack from internal 'packs' array
+
+                let allItemUpdatesSucceeded = true;
+
+                if (itemsThatWereInPack.length > 0) {
+                    itemsThatWereInPack.forEach(item => {
+                        const newPackIds = item.packIds.filter(id => id !== packId);
+                        const updatedItemData = { ...item, packIds: newPackIds };
+                        // Note: saveEditedItem calls persistence.saveData internally,
+                        // which will use global.packService.getPacks(), getting the updated pack list.
+                        if (!global.itemService.saveEditedItem(item.id, updatedItemData)) {
+                            console.error("packService: Failed to update item during pack deletion:", item.id);
+                            allItemUpdatesSucceeded = false;
                         }
-                        return item;
                     });
+                } else {
+                    // No items were associated with this pack.
+                    // We still need to persist the deletion of the pack itself.
+                    const currentItemsForPersistence = global.itemService.getItems().map(i => ({...i}));
+                    const currentCategories = (global.categoryService) ? global.categoryService.getCategories().map(c => ({...c})) : [];
+                    if (persistence) {
+                        persistence.saveData(currentItemsForPersistence, packs.map(p => ({...p})), currentCategories);
+                    } else {
+                        console.error("PackService: persistenceService not available in deletePack (no items path).");
+                    }
                 }
-                const updatedItems = (global.window && global.window.items) ? global.window.items : [];
-                const currentCategories = (global.window && global.window.categories) ? global.window.categories : [];
-                persistence.saveData(updatedItems, packs, currentCategories);
-                return true;
+                return true; // Pack deletion was processed.
             }
             return false;
         },
 
         addItemToPack: function(itemId, packId) {
-            if (!global.window || !global.window.items || !Array.isArray(global.window.items)) return false;
+            if (!global.itemService) {
+                console.error("packService: itemService is not available.");
+                return false;
+            }
+            const item = global.itemService.getItemById(itemId);
+            if (!item) {
+                console.error("packService: Item not found for ID:", itemId);
+                return false;
+            }
 
-            const itemIndex = global.window.items.findIndex(item => item.id === itemId);
-            if (itemIndex === -1) return false;
-
-            const item = global.window.items[itemIndex];
-            // Ensure packIds is an array and add packId if not already present
             const newPackIds = item.packIds ? [...item.packIds] : [];
             if (!newPackIds.includes(packId)) {
                 newPackIds.push(packId);
-                global.window.items[itemIndex] = { ...item, packIds: newPackIds };
+                const updatedItemData = { ...item, packIds: newPackIds };
 
-                const currentCategories = (global.window && global.window.categories) ? global.window.categories : [];
-                persistence.saveData(global.window.items, packs, currentCategories);
-                return true;
+                if (global.itemService.saveEditedItem(item.id, updatedItemData)) {
+                    // persistence.saveData is called within itemService.saveEditedItem
+                    return true;
+                } else {
+                    console.error("packService: Failed to save item with new packId.");
+                    return false;
+                }
             }
-            return false; // Item already in pack or item had no packIds array initially
+            return false; // Item already in pack
         },
 
         removeItemFromPack: function(itemId, packId) {
-            if (!global.window || !global.window.items || !Array.isArray(global.window.items)) return false;
+            if (!global.itemService) {
+                console.error("packService: itemService is not available.");
+                return false;
+            }
+            const item = global.itemService.getItemById(itemId);
+            if (!item) {
+                console.error("packService: Item not found for ID:", itemId);
+                return false;
+            }
 
-            const itemIndex = global.window.items.findIndex(item => item.id === itemId);
-            if (itemIndex === -1) return false;
-
-            const item = global.window.items[itemIndex];
             if (item.packIds && item.packIds.includes(packId)) {
                 const newPackIds = item.packIds.filter(id => id !== packId);
-                global.window.items[itemIndex] = {
+                const updatedItemData = {
                     ...item,
                     packIds: newPackIds,
                     packed: false // Ensure item is unpacked when removed from pack
                 };
-                const currentCategories = (global.window && global.window.categories) ? global.window.categories : [];
-                persistence.saveData(global.window.items, packs, currentCategories);
-                return true;
+
+                if (global.itemService.saveEditedItem(item.id, updatedItemData)) {
+                    // persistence.saveData is called within itemService.saveEditedItem
+                    return true;
+                } else {
+                    console.error("packService: Failed to save item after removing from pack.");
+                    return false;
+                }
             }
             return false;
         },
 
         unpackAllInCurrentPack: function(currentManagingPackId) {
-            if (!global.window || !global.window.items || !Array.isArray(global.window.items) || !currentManagingPackId) return false;
-
-            let changed = false;
-            // Create a new array with updated items
-            const updatedItems = global.window.items.map(item => {
-                if (item.packIds && item.packIds.includes(currentManagingPackId) && item.packed) {
-                    changed = true;
-                    return { ...item, packed: false };
-                }
-                return item;
-            });
-
-            if (changed) {
-                global.window.items = updatedItems; // Update the global items array
-                const currentCategories = (global.window && global.window.categories) ? global.window.categories : [];
-                persistence.saveData(global.window.items, packs, currentCategories);
+            if (!global.itemService || !currentManagingPackId) {
+                console.error("packService: itemService is not available or currentManagingPackId is missing.");
+                return false;
             }
+
+            const allItems = global.itemService.getItems();
+            let changed = false;
+
+            allItems.forEach(item => {
+                if (item.packIds && item.packIds.includes(currentManagingPackId) && item.packed) {
+                    const updatedItemData = { ...item, packed: false };
+                    if (global.itemService.saveEditedItem(item.id, updatedItemData)) {
+                        changed = true;
+                    } else {
+                        console.error("packService: Failed to save unpacked item:", item.id);
+                    }
+                }
+            });
+            // persistence.saveData is called within each itemService.saveEditedItem
             return changed;
         }
     };
